@@ -1,0 +1,37 @@
+name: Auto-create Pull Request
+
+on:
+  push:
+    branches-ignore:
+      - main
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  auto-pr:
+    name: Open PR if none exists
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create draft PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH="${{ github.ref_name }}"
+          TITLE="$(git log -1 --pretty=%s)"
+          BODY="Automated PR opened from branch \`${BRANCH}\` after push."
+
+          # Create a draft PR; ignore error if one already exists for this branch.
+          gh pr create \
+            --base main \
+            --head "${BRANCH}" \
+            --title "${TITLE}" \
+            --body "${BODY}" \
+            --draft \
+          && echo "PR created." \
+          || echo "PR already exists or could not be created — skipping."

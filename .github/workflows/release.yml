@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 name: Build & Release Mobile Apps
 
 # Triggers whenever a GitHub Release is published.
@@ -36,6 +37,21 @@ jobs:
   # ────────────────────────────────────────────────────────────────────────────
   build-android:
     name: Build Android + Android Auto
+=======
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create GitHub Release
+>>>>>>> origin/main
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -46,6 +62,7 @@ jobs:
           node-version: "20"
           cache: "npm"
 
+<<<<<<< HEAD
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -255,3 +272,33 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: garmin-builds/*.prg
+=======
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests
+        run: npm run test:coverage
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: Run Playwright E2E tests
+        run: npx playwright test
+        continue-on-error: true
+
+      - name: Build site package
+        run: |
+          mkdir -p dist
+          cp index.html workout.html workout.js README.md LICENSE dist/
+          cd dist && zip -r ../workout-site-${{ github.ref_name }}.zip .
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            workout-site-${{ github.ref_name }}.zip \
+            --title "Release ${{ github.ref_name }}" \
+            --notes "Static site package for release \`${{ github.ref_name }}\`." \
+            --verify-tag
+>>>>>>> origin/main

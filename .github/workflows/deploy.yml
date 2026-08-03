@@ -29,8 +29,8 @@ jobs:
       - name: Lint HTML files
         run: htmlhint "**/*.html"
 
-  unit-test:
-    name: Jest Unit Tests
+  test:
+    name: Unit & E2E Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -44,23 +44,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run tests with coverage
+      - name: Run Jest unit tests with coverage
         run: npm run test:coverage
-
-  playwright:
-    name: Playwright E2E Tests & Screenshots
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm ci
 
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
@@ -136,7 +121,7 @@ jobs:
 
   deploy:
     name: Deploy to GitHub Pages
-    needs: [lint, unit-test]
+    needs: [lint, test]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     outputs:
@@ -158,6 +143,27 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+  package:
+    name: Package Site
+    needs: deploy
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build site package
+        run: |
+          mkdir -p dist
+          cp index.html workout.html workout.js README.md LICENSE dist/
+          cd dist && zip -r ../workout-site.zip .
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: workout-site
+          path: workout-site.zip
+          retention-days: 90
 
   update-readme:
     name: Update README
