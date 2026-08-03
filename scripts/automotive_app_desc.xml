@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android Auto app descriptor.
+  Declares notification support so the workout app surfaces
+  rest-timer and workout reminders on Android Auto head units.
+-->
+<automotiveApp>
+    <uses name="notification" />
+</automotiveApp>
