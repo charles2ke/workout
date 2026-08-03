@@ -78,12 +78,12 @@ const fireKeydown = (target, key) =>
 // Test suite
 // ---------------------------------------------------------------------------
 describe("workout.js", () => {
-  let formatSeconds, storage, createSvg, activateDay;
+  let formatSeconds, storage, createSvg, activateDay, getTodayDayId, getLocalDateKey;
 
   beforeAll(() => {
     setupEnv();
     const exports = loadModule();
-    ({ formatSeconds, storage, createSvg, activateDay } = exports._test);
+    ({ formatSeconds, storage, createSvg, activateDay, getTodayDayId, getLocalDateKey } = exports._test);
   });
 
   afterEach(() => {
@@ -216,8 +216,21 @@ describe("workout.js", () => {
       expect(document.getElementById("workout-content").classList.contains("hidden-notes")).toBe(true);
     });
 
-    test("restores saved day from localStorage", () => {
-      resetAndLoad({ storageData: { selectedDay: "wed" } });
+    test("defaults to today's day when no saved selection exists", () => {
+      jest.useFakeTimers().setSystemTime(new Date("2026-08-05T09:00:00"));
+      resetAndLoad();
+      expect(document.getElementById("tab-wed").classList.contains("active")).toBe(true);
+    });
+
+    test("restores same-day saved day from localStorage", () => {
+      jest.useFakeTimers().setSystemTime(new Date("2026-08-05T09:00:00"));
+      resetAndLoad({ storageData: { selectedDay: { dayId: "fri", dateKey: "2026-08-05" } } });
+      expect(document.getElementById("tab-fri").classList.contains("active")).toBe(true);
+    });
+
+    test("ignores stale saved day from localStorage after the date changes", () => {
+      jest.useFakeTimers().setSystemTime(new Date("2026-08-05T09:00:00"));
+      resetAndLoad({ storageData: { selectedDay: { dayId: "fri", dateKey: "2026-08-04" } } });
       expect(document.getElementById("tab-wed").classList.contains("active")).toBe(true);
     });
 
@@ -273,8 +286,31 @@ describe("workout.js", () => {
     });
 
     test("saves selected day to localStorage", () => {
+      jest.useFakeTimers().setSystemTime(new Date("2026-08-08T09:00:00"));
       activateDay("sat");
-      expect(JSON.parse(localStorage.getItem("selectedDay"))).toBe("sat");
+      expect(JSON.parse(localStorage.getItem("selectedDay"))).toEqual({
+        dayId: "sat",
+        dateKey: "2026-08-08"
+      });
+    });
+  });
+
+  // =========================================================================
+  // Date helpers
+  // =========================================================================
+  describe("date helpers", () => {
+    test("getTodayDayId maps Date#getDay to workout ids", () => {
+      expect(getTodayDayId(new Date("2026-08-02T09:00:00"))).toBe("sun");
+      expect(getTodayDayId(new Date("2026-08-03T09:00:00"))).toBe("mon");
+      expect(getTodayDayId(new Date("2026-08-08T09:00:00"))).toBe("sat");
+    });
+
+    test("getTodayDayId falls back to first workout day for out-of-range getDay()", () => {
+      expect(getTodayDayId({ getDay: () => 99 })).toBe("mon");
+    });
+
+    test("getLocalDateKey returns YYYY-MM-DD in local time", () => {
+      expect(getLocalDateKey(new Date("2026-08-03T09:00:00"))).toBe("2026-08-03");
     });
   });
 

@@ -149,6 +149,36 @@ const storage = {
   }
 };
 
+const DAY_IDS_BY_INDEX = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+
+function getTodayDayId(date = new Date()) {
+  return DAY_IDS_BY_INDEX[date.getDay()] || WORKOUT_DATA[0].id;
+}
+
+function getLocalDateKey(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getInitialDayId() {
+  const todayId = getTodayDayId();
+  const todayKey = getLocalDateKey();
+  const savedDay = storage.get("selectedDay", null);
+
+  if (
+    savedDay &&
+    typeof savedDay === "object" &&
+    savedDay.dateKey === todayKey &&
+    WORKOUT_DATA.some((day) => day.id === savedDay.dayId)
+  ) {
+    return savedDay.dayId;
+  }
+
+  return todayId;
+}
+
 function formatSeconds(totalSeconds) {
   const safeSeconds = Math.max(0, Number(totalSeconds) || 0);
   const minutes = String(Math.floor(safeSeconds / 60)).padStart(2, "0");
@@ -360,7 +390,7 @@ function activateDay(dayId, focusTab = false) {
     panel.hidden = !isActive;
   });
 
-  storage.set("selectedDay", selectedId);
+  storage.set("selectedDay", { dayId: selectedId, dateKey: getLocalDateKey() });
   if (focusTab) {
     selectedTab.focus();
   }
@@ -580,8 +610,7 @@ function initWorkoutProgram() {
   weightInput.value = savedProfile.weight || "77";
   applyProfilePreferences();
 
-  const savedDay = storage.get("selectedDay", WORKOUT_DATA[0].id);
-  activateDay(savedDay);
+  activateDay(getInitialDayId());
 
   const savedTimerSeconds = storage.get("timerSeconds", 90);
   restSecondsInput.value = Number(savedTimerSeconds) || 90;
@@ -593,5 +622,5 @@ initWorkoutProgram();
 // ===== Test Exports =====
 /* istanbul ignore next */
 if (typeof module !== "undefined") {
-  module.exports = { _test: { formatSeconds, storage, createSvg, activateDay } };
+  module.exports = { _test: { formatSeconds, storage, createSvg, activateDay, getTodayDayId, getLocalDateKey } };
 }
