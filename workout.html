@@ -315,11 +315,11 @@
       <h1>7-Day Longevity & Strength Program</h1>
       <div class="stats-bar">
         <div class="profile-summary" aria-label="Editable profile summary">
-          <label class="profile-field" for="name-input">Name <input id="name-input" type="text" value="" aria-label="Name"></label>
+          <label class="profile-field" for="name-input">Name <input id="name-input" type="text" value="Tito" aria-label="Name"></label>
           <span class="profile-sep" aria-hidden="true">|</span>
           <label class="profile-field" for="age-input">Age <input id="age-input" type="number" min="1" max="120" step="1" value="42" aria-label="Age in years"></label>
           <span class="profile-sep" aria-hidden="true">|</span>
-          <label class="profile-field" for="ethnicity-input">Ethnicity <input id="ethnicity-input" type="text" value="" aria-label="Ethnicity"></label>
+          <label class="profile-field" for="ethnicity-input">Ethnicity <input id="ethnicity-input" type="text" value="Indian" aria-label="Ethnicity"></label>
           <span class="profile-sep" aria-hidden="true">|</span>
           <label class="profile-field" for="height-input">Height <input id="height-input" type="text" value="5'11&quot;" aria-label="Height"></label>
           <span class="profile-sep" aria-hidden="true">|</span>
@@ -910,15 +910,15 @@
       applyVisibilityPreferences();
 
       const savedProfile = storage.get("profile", {
-        name: "",
+        name: "Tito",
         age: "42",
-        ethnicity: "",
+        ethnicity: "Indian",
         height: "5'11\"",
         weight: "77"
       });
-      nameInput.value = savedProfile.name || "";
+      nameInput.value = savedProfile.name || "Tito";
       ageInput.value = savedProfile.age || "42";
-      ethnicityInput.value = savedProfile.ethnicity || "";
+      ethnicityInput.value = savedProfile.ethnicity || "Indian";
       heightInput.value = savedProfile.height || "5'11\"";
       weightInput.value = savedProfile.weight || "77";
       applyProfilePreferences();
