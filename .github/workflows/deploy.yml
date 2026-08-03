@@ -7,10 +7,9 @@ on:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
-  pull-requests: write
 
 concurrency:
   group: pages
@@ -164,55 +163,3 @@ jobs:
           name: workout-site
           path: workout-site.zip
           retention-days: 90
-
-  update-readme:
-    name: Update README
-    needs: deploy
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Patch README with deployment info
-        env:
-          PAGES_URL: ${{ needs.deploy.outputs.page_url }}
-        run: |
-          python3 - <<'EOF'
-          import os, re
-
-          url = os.environ.get("PAGES_URL", "")
-          timestamp = os.popen("date -u '+%Y-%m-%d %H:%M UTC'").read().strip()
-
-          with open("README.md", "r") as f:
-              content = f.read()
-
-          content = re.sub(
-              r"<!-- PAGES_URL_START -->.*?<!-- PAGES_URL_END -->",
-              f"<!-- PAGES_URL_START -->\n[{url}]({url})\n<!-- PAGES_URL_END -->",
-              content,
-              flags=re.DOTALL,
-          )
-          content = re.sub(
-              r"<!-- LAST_DEPLOYED_START -->.*?<!-- LAST_DEPLOYED_END -->",
-              f"<!-- LAST_DEPLOYED_START -->\n{timestamp}\n<!-- LAST_DEPLOYED_END -->",
-              content,
-              flags=re.DOTALL,
-          )
-
-          with open("README.md", "w") as f:
-              f.write(content)
-          EOF
-
-      - name: Open PR with updated README
-        uses: peter-evans/create-pull-request@v7
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "docs: update README with latest deployment info [skip ci]"
-          branch: chore/update-readme-deployment-info
-          delete-branch: true
-          title: "docs: update README with latest deployment info"
-          body: "Automated update of deployment URL and timestamp in README."
-          labels: documentation
-
