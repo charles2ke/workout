@@ -47,6 +47,41 @@
     .stats-bar { font-size: 0.95rem; color: var(--text-muted); }
     .stats-bar span { color: var(--accent); font-weight: 700; }
 
+    .profile-summary {
+      display: inline-flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .profile-field {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-muted);
+      font-size: 0.88rem;
+      white-space: nowrap;
+    }
+
+    .profile-field input {
+      width: 84px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      padding: 4px 6px;
+      background: var(--card-bg);
+      color: var(--text-main);
+      font-size: 0.88rem;
+    }
+
+    #name-input,
+    #ethnicity-input { width: 110px; }
+
+    .profile-sep {
+      color: var(--text-muted);
+      opacity: 0.6;
+    }
+
     /* ===== Controls ===== */
     .controls-panel {
       display: grid;
@@ -205,6 +240,23 @@
 
     /* ===== Mobile ===== */
     @media (max-width: 640px) {
+      .profile-summary {
+        gap: 6px;
+      }
+
+      .profile-field {
+        font-size: 0.84rem;
+      }
+
+      .profile-field input {
+        width: 76px;
+      }
+
+      #name-input,
+      #ethnicity-input { width: 96px; }
+
+      .profile-sep { display: none; }
+
       .nav-tabs {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -262,7 +314,17 @@
     <header>
       <h1>7-Day Longevity & Strength Program</h1>
       <div class="stats-bar">
-        Profile: <span>42 Yrs</span> | Height: <span>5'11"</span> | Weight: <span>77 kg</span>
+        <div class="profile-summary" aria-label="Editable profile summary">
+          <label class="profile-field" for="name-input">Name <input id="name-input" type="text" value="" aria-label="Name"></label>
+          <span class="profile-sep" aria-hidden="true">|</span>
+          <label class="profile-field" for="age-input">Age <input id="age-input" type="number" min="1" max="120" step="1" value="42" aria-label="Age in years"></label>
+          <span class="profile-sep" aria-hidden="true">|</span>
+          <label class="profile-field" for="ethnicity-input">Ethnicity <input id="ethnicity-input" type="text" value="" aria-label="Ethnicity"></label>
+          <span class="profile-sep" aria-hidden="true">|</span>
+          <label class="profile-field" for="height-input">Height <input id="height-input" type="text" value="5'11&quot;" aria-label="Height"></label>
+          <span class="profile-sep" aria-hidden="true">|</span>
+          <label class="profile-field" for="weight-input">Weight <input id="weight-input" type="number" min="1" max="500" step="0.1" value="77" aria-label="Weight in kilograms"></label>
+        </div>
       </div>
     </header>
 
@@ -528,6 +590,11 @@
     const workoutContent = document.getElementById("workout-content");
     const notesToggle = document.getElementById("toggle-notes");
     const difficultyToggle = document.getElementById("toggle-difficulty");
+    const nameInput = document.getElementById("name-input");
+    const ageInput = document.getElementById("age-input");
+    const ethnicityInput = document.getElementById("ethnicity-input");
+    const heightInput = document.getElementById("height-input");
+    const weightInput = document.getElementById("weight-input");
 
     function renderTabs(days) {
       const fragment = document.createDocumentFragment();
@@ -739,6 +806,21 @@
       });
     }
 
+    function applyProfilePreferences() {
+      storage.set("profile", {
+        name: nameInput.value,
+        age: ageInput.value,
+        ethnicity: ethnicityInput.value,
+        height: heightInput.value,
+        weight: weightInput.value
+      });
+    }
+
+    nameInput.addEventListener("input", applyProfilePreferences);
+    ageInput.addEventListener("input", applyProfilePreferences);
+    ethnicityInput.addEventListener("input", applyProfilePreferences);
+    heightInput.addEventListener("input", applyProfilePreferences);
+    weightInput.addEventListener("input", applyProfilePreferences);
     notesToggle.addEventListener("change", applyVisibilityPreferences);
     difficultyToggle.addEventListener("change", applyVisibilityPreferences);
 
@@ -826,6 +908,20 @@
       notesToggle.checked = Boolean(savedPrefs.showNotes);
       difficultyToggle.checked = Boolean(savedPrefs.showDifficulty);
       applyVisibilityPreferences();
+
+      const savedProfile = storage.get("profile", {
+        name: "",
+        age: "42",
+        ethnicity: "",
+        height: "5'11\"",
+        weight: "77"
+      });
+      nameInput.value = savedProfile.name || "";
+      ageInput.value = savedProfile.age || "42";
+      ethnicityInput.value = savedProfile.ethnicity || "";
+      heightInput.value = savedProfile.height || "5'11\"";
+      weightInput.value = savedProfile.weight || "77";
+      applyProfilePreferences();
 
       const savedDay = storage.get("selectedDay", WORKOUT_DATA[0].id);
       activateDay(savedDay);
