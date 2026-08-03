@@ -1,0 +1,5 @@
+node_modules/
+coverage/
+playwright-results/
+playwright-report/
+playwright-screenshots/
