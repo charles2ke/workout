@@ -5,54 +5,259 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>7-Day Longevity & Strength Program</title>
   <style>
+    /* ===== Base / Theme ===== */
     :root {
       --bg-color: #0f172a;
       --card-bg: #1e293b;
-      --accent: #38bdf8;
+      --accent: #7dd3fc;
       --text-main: #f8fafc;
-      --text-muted: #94a3b8;
-      --border-color: #334155;
+      --text-muted: #cbd5e1;
+      --border-color: #475569;
+      --focus-ring: #facc15;
+      --danger: #ef4444;
+      --success: #22c55e;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-    body { background-color: var(--bg-color); color: var(--text-main); line-height: 1.5; padding: 20px; }
-    .container { max-width: 900px; margin: 0 auto; }
-    
-    header { text-align: center; padding-bottom: 20px; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); }
-    h1 { font-size: 1.8rem; color: #fff; margin-bottom: 6px; }
-    .stats-bar { font-size: 0.9rem; color: var(--text-muted); }
-    .stats-bar span { color: var(--accent); font-weight: 600; }
-
-    /* Day Navigation */
-    .nav-tabs { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 25px; }
-    .tab-btn {
-      background-color: var(--card-bg); color: var(--text-muted);
-      border: 1px solid var(--border-color); padding: 8px 14px;
-      border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s;
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
-    .tab-btn:hover, .tab-btn.active { background-color: var(--accent); color: #0f172a; border-color: var(--accent); }
 
-    /* Day Sections */
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      line-height: 1.5;
+      min-height: 100svh;
+      padding: clamp(12px, 3vw, 20px);
+    }
+
+    .container { max-width: 960px; margin: 0 auto; }
+
+    /* ===== Header ===== */
+    header {
+      text-align: center;
+      padding-bottom: 20px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    h1 { font-size: clamp(1.4rem, 3vw, 1.9rem); color: #fff; margin-bottom: 6px; }
+    .stats-bar { font-size: 0.95rem; color: var(--text-muted); }
+    .stats-bar span { color: var(--accent); font-weight: 700; }
+
+    /* ===== Controls ===== */
+    .controls-panel {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .control-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 12px;
+    }
+
+    .control-card h2 {
+      font-size: 1rem;
+      margin-bottom: 8px;
+      color: var(--accent);
+    }
+
+    .toggle-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 0.9rem;
+    }
+
+    .toggle-group label {
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+      cursor: pointer;
+    }
+
+    .timer-controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .timer-controls input {
+      width: 90px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      padding: 8px;
+      background: #0b1120;
+      color: var(--text-main);
+    }
+
+    .timer-status {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 8px;
+      min-height: 1.2em;
+    }
+
+    .timer-status.done { color: var(--success); }
+    .timer-status.error { color: var(--danger); }
+
+    /* ===== Navigation Tabs ===== */
+    .nav-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    .tab-btn,
+    .button {
+      background-color: var(--card-bg);
+      color: var(--text-muted);
+      border: 1px solid var(--border-color);
+      padding: 10px 14px;
+      min-height: 44px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .tab-btn:hover,
+    .tab-btn.active,
+    .button:hover {
+      background-color: var(--accent);
+      color: #0b1120;
+      border-color: var(--accent);
+    }
+
+    /* ===== Workout Sections ===== */
     .day-section { display: none; }
     .day-section.active { display: block; }
-    .day-header { margin-bottom: 20px; }
-    .day-title { font-size: 1.4rem; color: var(--accent); }
-    .day-desc { color: var(--text-muted); font-size: 0.9rem; }
 
-    /* Grid */
-    .exercise-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
-    .exercise-card { background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: 10px; overflow: hidden; }
-    .svg-container { width: 100%; height: 140px; background-color: #0b1120; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid var(--border-color); }
+    .day-header { margin-bottom: 14px; }
+    .day-title { font-size: 1.35rem; color: var(--accent); }
+    .day-desc { color: var(--text-muted); font-size: 0.95rem; }
+    .day-time { color: var(--text-main); font-size: 0.9rem; margin-top: 4px; }
+
+    .exercise-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+    }
+
+    .exercise-card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .svg-container {
+      width: 100%;
+      aspect-ratio: 5 / 3;
+      background-color: #0b1120;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .svg-container svg { width: 100%; height: 100%; }
+
     .exercise-info { padding: 14px; }
     .exercise-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 6px; }
-    .exercise-stats { font-size: 0.85rem; color: var(--accent); font-weight: 600; margin-bottom: 8px; }
-    .exercise-notes { font-size: 0.85rem; color: var(--text-muted); }
+    .exercise-stats { font-size: 0.9rem; color: var(--accent); font-weight: 700; margin-bottom: 8px; }
+    .exercise-difficulty { font-size: 0.85rem; color: #fcd34d; margin-bottom: 6px; }
+    .exercise-notes { font-size: 0.88rem; color: var(--text-muted); margin-bottom: 10px; }
 
-    footer { text-align: center; margin-top: 30px; padding-top: 15px; border-top: 1px solid var(--border-color); color: var(--text-muted); font-size: 0.85rem; }
+    .hidden-notes .exercise-notes,
+    .hidden-difficulty .exercise-difficulty { display: none; }
+
+    .copy-btn {
+      width: 100%;
+      font-size: 0.85rem;
+      padding: 8px 10px;
+    }
+
+    /* ===== Accessibility / Focus ===== */
+    :focus-visible {
+      outline: 3px solid var(--focus-ring);
+      outline-offset: 2px;
+    }
+
+    /* ===== Footer ===== */
+    footer {
+      text-align: center;
+      margin-top: 30px;
+      padding-top: 15px;
+      border-top: 1px solid var(--border-color);
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    /* ===== Mobile ===== */
+    @media (max-width: 640px) {
+      .nav-tabs {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: 100%;
+      }
+
+      .tab-btn {
+        width: 100%;
+        justify-self: stretch;
+      }
+
+      .timer-controls input {
+        width: 100%;
+        flex: 1 1 100%;
+      }
+    }
+
+    /* ===== Print ===== */
+    @media print {
+      :root {
+        --bg-color: #ffffff;
+        --card-bg: #ffffff;
+        --text-main: #111827;
+        --text-muted: #374151;
+        --border-color: #9ca3af;
+        --accent: #111827;
+      }
+
+      body {
+        background: #fff;
+        color: #111;
+        padding: 0;
+      }
+
+      .controls-panel,
+      .nav-tabs,
+      .copy-btn {
+        display: none !important;
+      }
+
+      .day-section {
+        display: block !important;
+        page-break-inside: avoid;
+        margin-bottom: 14px;
+      }
+
+      .svg-container {
+        background: #fff;
+      }
+    }
   </style>
 </head>
 <body>
-
   <div class="container">
     <header>
       <h1>7-Day Longevity & Strength Program</h1>
@@ -61,197 +266,31 @@
       </div>
     </header>
 
-    <div class="nav-tabs">
-      <button class="tab-btn active" onclick="showDay('mon', this)">Mon</button>
-      <button class="tab-btn" onclick="showDay('tue', this)">Tue</button>
-      <button class="tab-btn" onclick="showDay('wed', this)">Wed</button>
-      <button class="tab-btn" onclick="showDay('thu', this)">Thu</button>
-      <button class="tab-btn" onclick="showDay('fri', this)">Fri</button>
-      <button class="tab-btn" onclick="showDay('sat', this)">Sat</button>
-      <button class="tab-btn" onclick="showDay('sun', this)">Sun</button>
-    </div>
+    <section class="controls-panel" aria-label="Workout controls">
+      <article class="control-card">
+        <h2>Display Options</h2>
+        <div class="toggle-group">
+          <label><input type="checkbox" id="toggle-notes" checked aria-label="Show exercise notes"> Show notes</label>
+          <label><input type="checkbox" id="toggle-difficulty" checked aria-label="Show exercise difficulty"> Show difficulty</label>
+        </div>
+      </article>
 
-    <!-- MONDAY -->
-    <div id="mon" class="day-section active">
-      <div class="day-header">
-        <h2 class="day-title">Monday: Upper Body Push & Pull</h2>
-        <p class="day-desc">Upper body strength and joint stability.</p>
-      </div>
-      <div class="exercise-grid">
-        <div class="exercise-card">
-          <div class="svg-container">
-            <svg viewBox="0 0 100 60" width="100%" height="100%">
-              <rect x="15" y="42" width="70" height="4" fill="#475569"/>
-              <circle cx="25" cy="35" r="5" fill="#38bdf8"/>
-              <line x1="28" y1="37" x2="65" y2="37" stroke="#38bdf8" stroke-width="4"/>
-              <line x1="45" y1="15" x2="45" y2="35" stroke="#cbd5e1" stroke-width="3"/>
-            </svg>
-          </div>
-          <div class="exercise-info">
-            <div class="exercise-title">Bench Press / Push-ups</div>
-            <div class="exercise-stats">3 Sets • 8–12 Reps • 90s Rest</div>
-            <p class="exercise-notes">Retract shoulder blades; elbows tucked at 45°.</p>
-          </div>
+      <article class="control-card" aria-live="polite">
+        <h2>Rest Timer</h2>
+        <div class="timer-controls">
+          <label for="rest-seconds">Seconds</label>
+          <input id="rest-seconds" type="number" min="5" step="5" value="90" aria-label="Rest timer seconds">
+          <button class="button" id="start-timer" type="button" aria-label="Start rest timer">Start</button>
+          <button class="button" id="stop-timer" type="button" aria-label="Stop rest timer">Stop</button>
         </div>
-        <div class="exercise-card">
-          <div class="svg-container">
-            <svg viewBox="0 0 100 60" width="100%" height="100%">
-              <line x1="20" y1="10" x2="80" y2="10" stroke="#cbd5e1" stroke-width="3"/>
-              <circle cx="50" cy="28" r="5" fill="#38bdf8"/>
-              <line x1="50" y1="33" x2="50" y2="52" stroke="#38bdf8" stroke-width="4"/>
-              <path d="M 50 35 L 30 20 M 50 35 L 70 20" stroke="#38bdf8" stroke-width="3"/>
-            </svg>
-          </div>
-          <div class="exercise-info">
-            <div class="exercise-title">Lat Pulldowns / Pull-ups</div>
-            <div class="exercise-stats">3 Sets • 8–10 Reps • 90s Rest</div>
-            <p class="exercise-notes">Drive with elbows down smoothly to upper chest.</p>
-          </div>
-        </div>
-      </div>
-    </div>
+        <p id="timer-display" role="timer" aria-live="polite">01:30</p>
+        <p id="timer-status" class="timer-status">Ready.</p>
+      </article>
+    </section>
 
-    <!-- TUESDAY -->
-    <div id="tue" class="day-section">
-      <div class="day-header">
-        <h2 class="day-title">Tuesday: Lower Body & Core</h2>
-        <p class="day-desc">Leg power with spine protection.</p>
-      </div>
-      <div class="exercise-grid">
-        <div class="exercise-card">
-          <div class="svg-container">
-            <svg viewBox="0 0 100 60" width="100%" height="100%">
-              <circle cx="40" cy="20" r="5" fill="#38bdf8"/>
-              <path d="M 40 25 L 40 38 L 25 45 L 25 58" stroke="#38bdf8" stroke-width="4" fill="none"/>
-              <circle cx="48" cy="28" r="4" fill="#cbd5e1"/>
-            </svg>
-          </div>
-          <div class="exercise-info">
-            <div class="exercise-title">Goblet Squats</div>
-            <div class="exercise-stats">3 Sets • 10–12 Reps • 90s Rest</div>
-            <p class="exercise-notes">Upright chest, sit between hips, knees out.</p>
-          </div>
-        </div>
-      </div>
-    </div>
+    <nav class="nav-tabs" role="tablist" aria-label="Workout days" id="day-tabs"></nav>
 
-    <!-- WEDNESDAY -->
-    <div id="wed" class="day-section">
-      <div class="day-header">
-        <h2 class="day-title">Wednesday: Active Recovery</h2>
-        <p class="day-desc">Aerobic base and joint mobility work.</p>
-      </div>
-      <div class="exercise-grid">
-        <div class="exercise-card">
-          <div class="svg-container">
-            <svg viewBox="0 0 100 60" width="100%" height="100%">
-              <path d="M 10 30 Q 30 10 50 30 T 90 30" fill="none" stroke="#38bdf8" stroke-width="3"/>
-              <circle cx="50" cy="30" r="4" fill="#f8fafc"/>
-            </svg>
-          </div>
-          <div class="exercise-info">
-            <div class="exercise-title">Zone 2 Cardio</div>
-            <div class="exercise-stats">30 Mins • HR 105–120 BPM</div>
-            <p class="exercise-notes">Brisk walk, light cycling, or light rowing.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- THURSDAY -->
-    <div id="thu" class="day-section">
-      <div class="day-header">
-        <h2 class="day-title">Thursday: Upper Body Hypertrophy</h2>
-        <p class="day-desc">Posture strengthening and back alignment.</p>
-      </div>
-      <div class="exercise-grid">
-        <div class="exercise-card">
-          <div class="svg-container">
-            <svg viewBox="0 0 100 60" width="100%" height="100%">
-              <rect x="20" y="38" width="45" height="4" fill="#475569"/>
-              <circle cx="30" cy="20" r="5" fill="#38bdf8"/>
-              <path d="M 45 28 L 45 42" stroke="#38bdf8" stroke-width="3"/>
-            </svg>
-          </div>
-          <div class="exercise-info">
-            <div class="exercise-title">Single-Arm DB Rows</div>
-            <div class="exercise-stats">3 Sets • 10 Reps/side • 60s Rest</div>
-            <p class="exercise-notes">Pull dumbbell to hip, keeping elbow close.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- FRIDAY -->
-    <div id="fri" class="day-section">
-      <div class="day-header">
-        <h2 class="day-title">Friday: Lower Body & Posterior Chain</h2>
-        <p class="day-desc">Glutes and hamstrings for joint support.</p>
-      </div>
-      <div class="exercise-grid">
-        <div class="exercise-card">
-          <div class="svg-container">
-            <svg viewBox="0 0 100 60" width="100%" height="100%">
-              <rect x="70" y="38" width="20" height="4" fill="#475569"/>
-              <circle cx="42" cy="18" r="5" fill="#38bdf8"/>
-              <path d="M 42 23 L 42 40 L 35 58" stroke="#38bdf8" stroke-width="4" fill="none"/>
-            </svg>
-          </div>
-          <div class="exercise-info">
-            <div class="exercise-title">Bulgarian Split Squats</div>
-            <div class="exercise-stats">3 Sets • 8 Reps/leg • 90s Rest</div>
-            <p class="exercise-notes">Keep front foot flat; controls hip stability.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- SATURDAY -->
-    <div id="sat" class="day-section">
-      <div class="day-header">
-        <h2 class="day-title">Saturday: Full Body Conditioning</h2>
-        <p class="day-desc">Endurance circuit and core strength.</p>
-      </div>
-      <div class="exercise-grid">
-        <div class="exercise-card">
-          <div class="svg-container">
-            <svg viewBox="0 0 100 60" width="100%" height="100%">
-              <circle cx="50" cy="18" r="5" fill="#38bdf8"/>
-              <path d="M 40 48 Q 55 48 70 28" stroke="#f8fafc" stroke-width="2" stroke-dasharray="2,2" fill="none"/>
-              <circle cx="70" cy="28" r="4" fill="#38bdf8"/>
-            </svg>
-          </div>
-          <div class="exercise-info">
-            <div class="exercise-title">Kettlebell Swings</div>
-            <div class="exercise-stats">3 Rounds • 12–15 Reps</div>
-            <p class="exercise-notes">Explode from the hips; power comes from glutes.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- SUNDAY -->
-    <div id="sun" class="day-section">
-      <div class="day-header">
-        <h2 class="day-title">Sunday: Rest & Recovery</h2>
-        <p class="day-desc">Full rest day for total muscle recovery.</p>
-      </div>
-      <div class="exercise-grid">
-        <div class="exercise-card">
-          <div class="svg-container">
-            <svg viewBox="0 0 100 60" width="100%" height="100%">
-              <rect x="25" y="38" width="50" height="12" rx="6" fill="#475569"/>
-              <circle cx="50" cy="28" r="5" fill="#38bdf8"/>
-            </svg>
-          </div>
-          <div class="exercise-info">
-            <div class="exercise-title">Foam Rolling & Walk</div>
-            <div class="exercise-stats">15–20 Mins • Light Pressure</div>
-            <p class="exercise-notes">Focus on upper back, quads, and calves.</p>
-          </div>
-        </div>
-      </div>
-    </div>
+    <main id="workout-content" aria-live="polite"></main>
 
     <footer>
       <p><strong>Golden Rule:</strong> Keep 1–2 reps in reserve on all compound lifts to protect joints and ensure consistent progress.</p>
@@ -259,12 +298,544 @@
   </div>
 
   <script>
-    function showDay(dayId, btn) {
-      document.querySelectorAll('.day-section').forEach(s => s.classList.remove('active'));
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.getElementById(dayId).classList.add('active');
-      btn.classList.add('active');
+    // ===== Data =====
+    const WORKOUT_DATA = [
+      {
+        id: "mon",
+        label: "Mon",
+        title: "Monday: Upper Body Push & Pull",
+        description: "Upper body strength and joint stability.",
+        estimatedMinutes: 45,
+        exercises: [
+          {
+            name: "Bench Press / Push-ups",
+            stats: "3 Sets • 8–12 Reps • 90s Rest",
+            notes: "Retract shoulder blades; elbows tucked at 45°.",
+            difficulty: "Moderate",
+            restSeconds: 90,
+            illustration: "press"
+          },
+          {
+            name: "Lat Pulldowns / Pull-ups",
+            stats: "3 Sets • 8–10 Reps • 90s Rest",
+            notes: "Drive with elbows down smoothly to upper chest.",
+            difficulty: "Moderate",
+            restSeconds: 90,
+            illustration: "pull"
+          }
+        ]
+      },
+      {
+        id: "tue",
+        label: "Tue",
+        title: "Tuesday: Lower Body & Core",
+        description: "Leg power with spine protection.",
+        estimatedMinutes: 40,
+        exercises: [
+          {
+            name: "Goblet Squats",
+            stats: "3 Sets • 10–12 Reps • 90s Rest",
+            notes: "Upright chest, sit between hips, knees out.",
+            difficulty: "Moderate",
+            restSeconds: 90,
+            illustration: "squat"
+          }
+        ]
+      },
+      {
+        id: "wed",
+        label: "Wed",
+        title: "Wednesday: Active Recovery",
+        description: "Aerobic base and joint mobility work.",
+        estimatedMinutes: 30,
+        exercises: [
+          {
+            name: "Zone 2 Cardio",
+            stats: "30 Mins • HR 105–120 BPM",
+            notes: "Brisk walk, light cycling, or light rowing.",
+            difficulty: "Easy",
+            restSeconds: 30,
+            illustration: "cardio"
+          }
+        ]
+      },
+      {
+        id: "thu",
+        label: "Thu",
+        title: "Thursday: Upper Body Hypertrophy",
+        description: "Posture strengthening and back alignment.",
+        estimatedMinutes: 40,
+        exercises: [
+          {
+            name: "Single-Arm DB Rows",
+            stats: "3 Sets • 10 Reps/side • 60s Rest",
+            notes: "Pull dumbbell to hip, keeping elbow close.",
+            difficulty: "Moderate",
+            restSeconds: 60,
+            illustration: "row"
+          }
+        ]
+      },
+      {
+        id: "fri",
+        label: "Fri",
+        title: "Friday: Lower Body & Posterior Chain",
+        description: "Glutes and hamstrings for joint support.",
+        estimatedMinutes: 40,
+        exercises: [
+          {
+            name: "Bulgarian Split Squats",
+            stats: "3 Sets • 8 Reps/leg • 90s Rest",
+            notes: "Keep front foot flat; controls hip stability.",
+            difficulty: "Hard",
+            restSeconds: 90,
+            illustration: "split"
+          }
+        ]
+      },
+      {
+        id: "sat",
+        label: "Sat",
+        title: "Saturday: Full Body Conditioning",
+        description: "Endurance circuit and core strength.",
+        estimatedMinutes: 35,
+        exercises: [
+          {
+            name: "Kettlebell Swings",
+            stats: "3 Rounds • 12–15 Reps",
+            notes: "Explode from the hips; power comes from glutes.",
+            difficulty: "Moderate",
+            restSeconds: 45,
+            illustration: "swing"
+          }
+        ]
+      },
+      {
+        id: "sun",
+        label: "Sun",
+        title: "Sunday: Rest & Recovery",
+        description: "Full rest day for total muscle recovery.",
+        estimatedMinutes: 20,
+        exercises: [
+          {
+            name: "Foam Rolling & Walk",
+            stats: "15–20 Mins • Light Pressure",
+            notes: "Focus on upper back, quads, and calves.",
+            difficulty: "Easy",
+            restSeconds: 30,
+            illustration: "recovery"
+          }
+        ]
+      }
+    ];
+
+    // ===== Utilities =====
+    const storage = {
+      get(key, fallback) {
+        try {
+          const value = localStorage.getItem(key);
+          return value === null ? fallback : JSON.parse(value);
+        } catch {
+          return fallback;
+        }
+      },
+      set(key, value) {
+        try {
+          localStorage.setItem(key, JSON.stringify(value));
+          return true;
+        } catch {
+          return false;
+        }
+      }
+    };
+
+    function formatSeconds(totalSeconds) {
+      const safeSeconds = Math.max(0, Number(totalSeconds) || 0);
+      const minutes = String(Math.floor(safeSeconds / 60)).padStart(2, "0");
+      const seconds = String(safeSeconds % 60).padStart(2, "0");
+      return `${minutes}:${seconds}`;
     }
+
+    function createSvg(illustration, titleText) {
+      const svgNs = "http://www.w3.org/2000/svg";
+      const svg = document.createElementNS(svgNs, "svg");
+      svg.setAttribute("viewBox", "0 0 100 60");
+      svg.setAttribute("role", "img");
+      svg.setAttribute("aria-label", titleText);
+
+      const title = document.createElementNS(svgNs, "title");
+      title.textContent = titleText;
+      svg.appendChild(title);
+
+      const add = (name, attrs) => {
+        const el = document.createElementNS(svgNs, name);
+        Object.entries(attrs).forEach(([key, value]) => el.setAttribute(key, String(value)));
+        svg.appendChild(el);
+      };
+
+      switch (illustration) {
+        case "press":
+          add("rect", { x: 15, y: 42, width: 70, height: 4, fill: "#475569" });
+          add("circle", { cx: 25, cy: 35, r: 5, fill: "#38bdf8" });
+          add("line", { x1: 28, y1: 37, x2: 65, y2: 37, stroke: "#38bdf8", "stroke-width": 4 });
+          add("line", { x1: 45, y1: 15, x2: 45, y2: 35, stroke: "#cbd5e1", "stroke-width": 3 });
+          break;
+        case "pull":
+          add("line", { x1: 20, y1: 10, x2: 80, y2: 10, stroke: "#cbd5e1", "stroke-width": 3 });
+          add("circle", { cx: 50, cy: 28, r: 5, fill: "#38bdf8" });
+          add("line", { x1: 50, y1: 33, x2: 50, y2: 52, stroke: "#38bdf8", "stroke-width": 4 });
+          add("path", { d: "M 50 35 L 30 20 M 50 35 L 70 20", stroke: "#38bdf8", "stroke-width": 3, fill: "none" });
+          break;
+        case "squat":
+          add("circle", { cx: 40, cy: 20, r: 5, fill: "#38bdf8" });
+          add("path", { d: "M 40 25 L 40 38 L 25 45 L 25 58", stroke: "#38bdf8", "stroke-width": 4, fill: "none" });
+          add("circle", { cx: 48, cy: 28, r: 4, fill: "#cbd5e1" });
+          break;
+        case "cardio":
+          add("path", { d: "M 10 30 Q 30 10 50 30 T 90 30", fill: "none", stroke: "#38bdf8", "stroke-width": 3 });
+          add("circle", { cx: 50, cy: 30, r: 4, fill: "#f8fafc" });
+          break;
+        case "row":
+          add("rect", { x: 20, y: 38, width: 45, height: 4, fill: "#475569" });
+          add("circle", { cx: 30, cy: 20, r: 5, fill: "#38bdf8" });
+          add("path", { d: "M 45 28 L 45 42", stroke: "#38bdf8", "stroke-width": 3 });
+          break;
+        case "split":
+          add("rect", { x: 70, y: 38, width: 20, height: 4, fill: "#475569" });
+          add("circle", { cx: 42, cy: 18, r: 5, fill: "#38bdf8" });
+          add("path", { d: "M 42 23 L 42 40 L 35 58", stroke: "#38bdf8", "stroke-width": 4, fill: "none" });
+          break;
+        case "swing":
+          add("circle", { cx: 50, cy: 18, r: 5, fill: "#38bdf8" });
+          add("path", { d: "M 40 48 Q 55 48 70 28", stroke: "#f8fafc", "stroke-width": 2, "stroke-dasharray": "2,2", fill: "none" });
+          add("circle", { cx: 70, cy: 28, r: 4, fill: "#38bdf8" });
+          break;
+        case "recovery":
+          add("rect", { x: 25, y: 38, width: 50, height: 12, rx: 6, fill: "#475569" });
+          add("circle", { cx: 50, cy: 28, r: 5, fill: "#38bdf8" });
+          break;
+        default:
+          add("rect", { x: 10, y: 12, width: 80, height: 36, rx: 6, fill: "#334155" });
+          add("text", { x: 50, y: 34, "text-anchor": "middle", fill: "#cbd5e1", "font-size": 8 });
+          svg.lastChild.textContent = "Exercise";
+      }
+
+      return svg;
+    }
+
+    // ===== UI Rendering =====
+    const tabsNav = document.getElementById("day-tabs");
+    const workoutContent = document.getElementById("workout-content");
+    const notesToggle = document.getElementById("toggle-notes");
+    const difficultyToggle = document.getElementById("toggle-difficulty");
+
+    function renderTabs(days) {
+      const fragment = document.createDocumentFragment();
+      days.forEach((day, index) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "tab-btn";
+        button.role = "tab";
+        button.id = `tab-${day.id}`;
+        button.dataset.day = day.id;
+        button.setAttribute("aria-controls", `panel-${day.id}`);
+        button.setAttribute("aria-selected", "false");
+        button.setAttribute("aria-label", `Show workout for ${day.title}`);
+        button.tabIndex = index === 0 ? 0 : -1;
+        button.textContent = day.label;
+        fragment.appendChild(button);
+      });
+      tabsNav.replaceChildren(fragment);
+    }
+
+    function renderDays(days) {
+      const fragment = document.createDocumentFragment();
+
+      days.forEach((day) => {
+        const section = document.createElement("section");
+        section.className = "day-section";
+        section.id = `panel-${day.id}`;
+        section.setAttribute("role", "tabpanel");
+        section.setAttribute("aria-labelledby", `tab-${day.id}`);
+
+        const header = document.createElement("div");
+        header.className = "day-header";
+
+        const title = document.createElement("h2");
+        title.className = "day-title";
+        title.textContent = day.title;
+
+        const desc = document.createElement("p");
+        desc.className = "day-desc";
+        desc.textContent = day.description;
+
+        const eta = document.createElement("p");
+        eta.className = "day-time";
+        eta.textContent = `Estimated completion time: ${day.estimatedMinutes} mins`;
+
+        header.append(title, desc, eta);
+
+        const grid = document.createElement("section");
+        grid.className = "exercise-grid";
+        grid.setAttribute("aria-label", `${day.label} exercises`);
+
+        day.exercises.forEach((exercise) => {
+          const card = document.createElement("article");
+          card.className = "exercise-card";
+
+          const svgContainer = document.createElement("div");
+          svgContainer.className = "svg-container";
+          svgContainer.appendChild(createSvg(exercise.illustration, `${exercise.name} illustration`));
+
+          const info = document.createElement("div");
+          info.className = "exercise-info";
+
+          const exerciseTitle = document.createElement("h3");
+          exerciseTitle.className = "exercise-title";
+          exerciseTitle.textContent = exercise.name;
+
+          const stats = document.createElement("p");
+          stats.className = "exercise-stats";
+          stats.textContent = exercise.stats;
+
+          const difficulty = document.createElement("p");
+          difficulty.className = "exercise-difficulty";
+          difficulty.textContent = `Difficulty: ${exercise.difficulty}`;
+
+          const notes = document.createElement("p");
+          notes.className = "exercise-notes";
+          notes.textContent = exercise.notes;
+
+          const copyButton = document.createElement("button");
+          copyButton.type = "button";
+          copyButton.className = "button copy-btn";
+          copyButton.dataset.exercise = JSON.stringify({
+            day: day.title,
+            name: exercise.name,
+            stats: exercise.stats,
+            notes: exercise.notes,
+            difficulty: exercise.difficulty
+          });
+          copyButton.setAttribute("aria-label", `Copy details for ${exercise.name}`);
+          copyButton.textContent = "Copy details";
+
+          info.append(exerciseTitle, stats, difficulty, notes, copyButton);
+          card.append(svgContainer, info);
+          grid.appendChild(card);
+        });
+
+        section.append(header, grid);
+        fragment.appendChild(section);
+      });
+
+      workoutContent.replaceChildren(fragment);
+    }
+
+    function activateDay(dayId, focusTab = false) {
+      const tabs = Array.from(document.querySelectorAll(".tab-btn"));
+      const panels = Array.from(document.querySelectorAll(".day-section"));
+      const selectedTab = tabs.find((tab) => tab.dataset.day === dayId) || tabs[0];
+      if (!selectedTab) {
+        return;
+      }
+
+      const selectedId = selectedTab.dataset.day;
+
+      tabs.forEach((tab) => {
+        const isActive = tab.dataset.day === selectedId;
+        tab.classList.toggle("active", isActive);
+        tab.setAttribute("aria-selected", String(isActive));
+        tab.tabIndex = isActive ? 0 : -1;
+      });
+
+      panels.forEach((panel) => {
+        const isActive = panel.id === `panel-${selectedId}`;
+        panel.classList.toggle("active", isActive);
+        panel.hidden = !isActive;
+      });
+
+      storage.set("selectedDay", selectedId);
+      if (focusTab) {
+        selectedTab.focus();
+      }
+    }
+
+    // ===== Interaction =====
+    tabsNav.addEventListener("click", (event) => {
+      const tab = event.target.closest(".tab-btn");
+      if (!tab) {
+        return;
+      }
+      activateDay(tab.dataset.day);
+    });
+
+    tabsNav.addEventListener("keydown", (event) => {
+      const currentTab = event.target.closest(".tab-btn");
+      if (!currentTab) {
+        return;
+      }
+
+      const tabs = Array.from(document.querySelectorAll(".tab-btn"));
+      const currentIndex = tabs.indexOf(currentTab);
+      let nextIndex = currentIndex;
+
+      if (event.key === "ArrowRight") {
+        nextIndex = (currentIndex + 1) % tabs.length;
+      } else if (event.key === "ArrowLeft") {
+        nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+      } else if (event.key === "Home") {
+        nextIndex = 0;
+      } else if (event.key === "End") {
+        nextIndex = tabs.length - 1;
+      } else if (event.key === "Enter" || event.key === " ") {
+        activateDay(currentTab.dataset.day);
+        return;
+      } else {
+        return;
+      }
+
+      event.preventDefault();
+      activateDay(tabs[nextIndex].dataset.day, true);
+    });
+
+    workoutContent.addEventListener("click", async (event) => {
+      const copyBtn = event.target.closest(".copy-btn");
+      if (!copyBtn) {
+        return;
+      }
+
+      try {
+        const details = JSON.parse(copyBtn.dataset.exercise || "{}");
+        const text = `${details.day}\n${details.name}\n${details.stats}\nDifficulty: ${details.difficulty}\n${details.notes}`;
+
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(text);
+        } else {
+          const fallbackInput = document.createElement("textarea");
+          fallbackInput.value = text;
+          fallbackInput.style.position = "fixed";
+          fallbackInput.style.left = "-9999px";
+          document.body.appendChild(fallbackInput);
+          fallbackInput.select();
+          document.execCommand("copy");
+          fallbackInput.remove();
+        }
+
+        copyBtn.textContent = "Copied!";
+        window.setTimeout(() => {
+          copyBtn.textContent = "Copy details";
+        }, 1200);
+      } catch {
+        copyBtn.textContent = "Copy failed";
+      }
+    });
+
+    function applyVisibilityPreferences() {
+      workoutContent.classList.toggle("hidden-notes", !notesToggle.checked);
+      workoutContent.classList.toggle("hidden-difficulty", !difficultyToggle.checked);
+      storage.set("prefs", {
+        showNotes: notesToggle.checked,
+        showDifficulty: difficultyToggle.checked
+      });
+    }
+
+    notesToggle.addEventListener("change", applyVisibilityPreferences);
+    difficultyToggle.addEventListener("change", applyVisibilityPreferences);
+
+    // ===== Rest Timer =====
+    const restSecondsInput = document.getElementById("rest-seconds");
+    const startTimerButton = document.getElementById("start-timer");
+    const stopTimerButton = document.getElementById("stop-timer");
+    const timerDisplay = document.getElementById("timer-display");
+    const timerStatus = document.getElementById("timer-status");
+
+    let timerHandle = null;
+    let remainingSeconds = Number(restSecondsInput.value) || 90;
+
+    function updateTimerDisplay(seconds) {
+      timerDisplay.textContent = formatSeconds(seconds);
+    }
+
+    function setTimerStatus(text, kind = "") {
+      timerStatus.textContent = text;
+      timerStatus.className = `timer-status${kind ? ` ${kind}` : ""}`;
+    }
+
+    function playNotificationTone() {
+      try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        oscillator.type = "sine";
+        oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
+        gain.gain.setValueAtTime(0.15, audioContext.currentTime);
+        oscillator.connect(gain);
+        gain.connect(audioContext.destination);
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 0.25);
+      } catch {
+        // If audio is blocked by browser settings, keep visual notification only.
+      }
+    }
+
+    function stopTimer(message = "Stopped.") {
+      if (timerHandle) {
+        clearInterval(timerHandle);
+        timerHandle = null;
+      }
+      setTimerStatus(message);
+    }
+
+    function startTimer() {
+      const inputSeconds = Number(restSecondsInput.value);
+      if (!Number.isFinite(inputSeconds) || inputSeconds < 5) {
+        setTimerStatus("Please enter at least 5 seconds.", "error");
+        return;
+      }
+
+      remainingSeconds = Math.floor(inputSeconds);
+      storage.set("timerSeconds", remainingSeconds);
+      updateTimerDisplay(remainingSeconds);
+      stopTimer("Running...");
+
+      timerHandle = window.setInterval(() => {
+        remainingSeconds -= 1;
+        updateTimerDisplay(remainingSeconds);
+
+        if (remainingSeconds <= 0) {
+          stopTimer("Rest complete!", "done");
+          playNotificationTone();
+        }
+      }, 1000);
+    }
+
+    startTimerButton.addEventListener("click", startTimer);
+    stopTimerButton.addEventListener("click", () => stopTimer());
+
+    // ===== Initialization =====
+    function initWorkoutProgram() {
+      if (!Array.isArray(WORKOUT_DATA) || WORKOUT_DATA.length === 0) {
+        workoutContent.textContent = "Workout program data is unavailable right now.";
+        return;
+      }
+
+      renderTabs(WORKOUT_DATA);
+      renderDays(WORKOUT_DATA);
+
+      const savedPrefs = storage.get("prefs", { showNotes: true, showDifficulty: true });
+      notesToggle.checked = Boolean(savedPrefs.showNotes);
+      difficultyToggle.checked = Boolean(savedPrefs.showDifficulty);
+      applyVisibilityPreferences();
+
+      const savedDay = storage.get("selectedDay", WORKOUT_DATA[0].id);
+      activateDay(savedDay);
+
+      const savedTimerSeconds = storage.get("timerSeconds", 90);
+      restSecondsInput.value = Number(savedTimerSeconds) || 90;
+      updateTimerDisplay(Number(restSecondsInput.value));
+    }
+
+    initWorkoutProgram();
   </script>
 </body>
 </html>
