@@ -22,7 +22,7 @@ class WorkoutView extends WatchUi.View {
 
     function initialize() {
         View.initialize();
-        // Gregorian weekday: 0=Sun, 1=Mon, …, 6=Sat  →  array index Mon=0…Sun=6
+        // Gregorian weekday: 1=Sun, 2=Mon, …, 7=Sat  →  array index Mon=0…Sun=6
         var info = Gregorian.info(Time.now(), Time.FORMAT_SHORT);
         mDayIndex = (info.day_of_week + 5) % 7;
     }
