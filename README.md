@@ -1,6 +1,6 @@
-# WorkOut
+# 7-Day Longevity & Strength Program
 
-My weekly workout plan
+A lightweight, browser-only weekly workout planner. No frameworks, no build step — just HTML, CSS, and vanilla JavaScript served as a static site via GitHub Pages.
 
 ## Live Site
 
@@ -13,3 +13,82 @@ _Not yet deployed._
 <!-- LAST_DEPLOYED_START -->
 _Never_
 <!-- LAST_DEPLOYED_END -->
+
+## Features
+
+- **7-day program** — structured daily workouts covering upper body push/pull, lower body, active recovery, hypertrophy, posterior chain, full-body conditioning, and rest
+- **Exercise cards** — each card shows sets/reps, difficulty, coaching notes, and an inline SVG illustration
+- **Rest timer** — configurable countdown timer with an audio notification tone when rest is complete
+- **Editable profile** — inline fields for name, age, ethnicity, height, and weight, persisted in `localStorage`
+- **Display toggles** — show/hide exercise notes and difficulty labels
+- **Copy to clipboard** — one-click copy of exercise details for sharing
+- **Keyboard navigation** — full arrow-key support on the day tabs (ARIA tablist pattern)
+- **Accessibility** — skip link, ARIA roles, live regions, and focus-visible styles throughout
+- **Responsive** — mobile-first layout with a print stylesheet
+
+## Tech Stack
+
+| Layer | Tool |
+|---|---|
+| UI | Vanilla HTML / CSS / JavaScript (ES2020) |
+| Unit tests | [Jest](https://jestjs.io/) + jsdom |
+| E2E tests | [Playwright](https://playwright.dev/) (Chromium) |
+| Hosting | GitHub Pages |
+| CI/CD | GitHub Actions |
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 20+
+
+### Install dependencies
+
+```bash
+npm install
+```
+
+### Run locally
+
+```bash
+npm run serve
+```
+
+Then open `http://localhost:8080` in your browser. The app redirects from `index.html` to `workout.html` automatically.
+
+## Testing
+
+### Unit tests (Jest)
+
+```bash
+npm test
+```
+
+### Unit tests with coverage
+
+```bash
+npm run test:coverage
+```
+
+### End-to-end tests (Playwright)
+
+```bash
+npx playwright install chromium --with-deps   # first time only
+npm run test:e2e
+```
+
+Playwright screenshots are saved to `playwright-screenshots/` and uploaded as a CI artifact on every pull request.
+
+## CI / CD
+
+Every push or pull request to `main` triggers the following GitHub Actions jobs:
+
+1. **HTML Lint** — runs `htmlhint` against all HTML files
+2. **Jest Unit Tests** — runs the full test suite with coverage
+3. **Playwright E2E Tests** — runs browser tests and uploads screenshots as an artifact; a bot comment on each PR links directly to the artifact
+4. **Deploy to GitHub Pages** — deploys on merge to `main` (after lint + unit tests pass)
+5. **Update README** — automatically patches the *Live Site* URL and *Last Deployed* timestamp in this file after each successful deployment
+
+## License
+
+[MIT](LICENSE)
