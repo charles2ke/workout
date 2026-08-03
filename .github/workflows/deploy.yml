@@ -176,6 +176,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Patch README with deployment info
+        id: patch-readme
         env:
           PAGES_URL: ${{ needs.deploy.outputs.page_url }}
         run: |
@@ -203,9 +204,23 @@ jobs:
 
           with open("README.md", "w") as f:
               f.write(content)
+
+          github_output = os.environ.get("GITHUB_OUTPUT")
+          if github_output:
+              with open(github_output, "a") as f:
+                  f.write(f"timestamp={timestamp}\n")
           EOF
 
+      - name: Upload patched README artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: readme-deployment-info
+          path: README.md
+          retention-days: 30
+
       - name: Open PR with updated README
+        id: readme-pr
+        continue-on-error: true
         uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -216,3 +231,18 @@ jobs:
           body: "Automated update of deployment URL and timestamp in README."
           labels: documentation
 
+      - name: Summarize README update
+        if: always()
+        run: |
+          {
+            echo "## README deployment info"
+            echo ""
+            echo "- Pages URL: ${{ needs.deploy.outputs.page_url }}"
+            echo "- Last deployed: ${{ steps.patch-readme.outputs.timestamp }}"
+            echo "- Patched README artifact: readme-deployment-info"
+            if [ "${{ steps.readme-pr.outcome }}" = "failure" ]; then
+              echo ""
+              echo "Opening the README update PR failed, usually because repository rules block workflow-created branches."
+              echo "The patched README is still available as the readme-deployment-info artifact."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

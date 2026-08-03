@@ -91,7 +91,7 @@ Every push or pull request to `main` triggers the following GitHub Actions jobs:
 2. **Jest Unit Tests** — runs the full test suite with coverage
 3. **Playwright E2E Tests** — runs browser tests and uploads screenshots as an artifact; a bot comment on each PR links directly to the artifact
 4. **Deploy to GitHub Pages** — deploys on merge to `main` (after lint + unit tests pass)
-5. **Update README** — automatically patches the *Live Site* URL and *Last Deployed* timestamp in this file after each successful deployment
+5. **Update README** — prepares the latest *Live Site* URL and *Last Deployed* timestamp after each successful deployment, uploads the patched README as an artifact, and attempts to open a documentation PR when repository rules allow it
 
 ## License
 
