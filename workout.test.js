@@ -10,9 +10,8 @@ const path = require("path");
 const htmlPath = path.join(__dirname, "workout.html");
 const htmlContent = fs.readFileSync(htmlPath, "utf8");
 const bodyMatch = htmlContent.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-const domBody = bodyMatch
-  ? bodyMatch[1].replace(/<script[\s\S]*?<\/script\s*>/gi, "")
-  : "";
+// JSDOM does not execute scripts inserted via innerHTML, so no stripping needed
+const domBody = bodyMatch ? bodyMatch[1] : "";
 
 // ---------------------------------------------------------------------------
 // Re-usable mock builders
