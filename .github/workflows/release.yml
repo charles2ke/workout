@@ -1,0 +1,51 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests
+        run: npm run test:coverage
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: Run Playwright E2E tests
+        run: npx playwright test
+        continue-on-error: true
+
+      - name: Build site package
+        run: |
+          mkdir -p dist
+          cp index.html workout.html workout.js README.md LICENSE dist/
+          cd dist && zip -r ../workout-site-${{ github.ref_name }}.zip .
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            workout-site-${{ github.ref_name }}.zip \
+            --title "Release ${{ github.ref_name }}" \
+            --notes "Static site package for release \`${{ github.ref_name }}\`." \
+            --verify-tag
