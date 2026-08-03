@@ -428,20 +428,14 @@ workoutContent.addEventListener("click", async (event) => {
     }
 
     copyBtn.textContent = "Copied!";
-    if (copyAnnouncement) {
-      copyAnnouncement.textContent = `Copied details for ${details.name}`;
-    }
+    copyAnnouncement.textContent = `Copied details for ${details.name}`;
     window.setTimeout(() => {
       copyBtn.textContent = "Copy details";
-      if (copyAnnouncement) {
-        copyAnnouncement.textContent = "";
-      }
+      copyAnnouncement.textContent = "";
     }, 1200);
   } catch {
     copyBtn.textContent = "Copy failed";
-    if (copyAnnouncement) {
-      copyAnnouncement.textContent = "Copy failed. Please try again.";
-    }
+    copyAnnouncement.textContent = "Copy failed. Please try again.";
   }
 });
 
@@ -497,7 +491,7 @@ function updateTimerDisplay(seconds) {
   timerDisplay.textContent = formatSeconds(seconds);
 }
 
-function setTimerStatus(text, kind = "") {
+function setTimerStatus(text, kind) {
   timerStatus.textContent = text;
   timerStatus.className = `timer-status${kind ? ` ${kind}` : ""}`;
 }

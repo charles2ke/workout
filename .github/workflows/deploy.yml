@@ -11,6 +11,7 @@ permissions:
   pages: write
   id-token: write
   security-events: write
+  pull-requests: write
 
 concurrency:
   group: pages
@@ -29,6 +30,111 @@ jobs:
       - name: Lint HTML files
         run: htmlhint "**/*.html"
 
+  unit-test:
+    name: Jest Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests with coverage
+        run: npm run test:coverage
+
+  playwright:
+    name: Playwright E2E Tests & Screenshots
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: Run Playwright tests
+        run: npx playwright test
+        continue-on-error: true
+
+      - name: Upload screenshots artifact
+        id: screenshots
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-screenshots
+          path: playwright-screenshots/
+          retention-days: 30
+
+      - name: Upload Playwright report artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30
+
+      - name: Post PR comment with screenshot links
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const screenshotUrl = '${{ steps.screenshots.outputs.artifact-url }}';
+            const body = [
+              '## 🎭 Playwright Screenshots',
+              '',
+              'E2E tests ran against the live page and captured screenshots at key states.',
+              '',
+              `| Artifact | Link |`,
+              `|---|---|`,
+              `| 📸 Screenshots (zip) | [Download](${screenshotUrl}) |`,
+              `| 📋 Full HTML report | [View workflow run](${runUrl}) |`,
+              '',
+              '**Screenshots captured:**',
+              '`01` Initial load · `02` Day tabs · `03` Wednesday workout · `04` Ethnicity dropdown',
+              '`05` Ethnicity changed · `06` Profile reset · `07` Notes hidden · `08` Skip link',
+              '`09` Timer running · `10` Timer complete · `11` Copy feedback · `12` Saturday view',
+            ].join('\n');
+
+            // Update or create the comment (keep one sticky comment per PR)
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find(c =>
+              c.user.login === 'github-actions[bot]' && c.body.includes('🎭 Playwright Screenshots')
+            );
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
   codeql:
     name: CodeQL Security Scan
     runs-on: ubuntu-latest
@@ -45,7 +151,7 @@ jobs:
 
   deploy:
     name: Deploy to GitHub Pages
-    needs: [lint, codeql]
+    needs: [lint, unit-test, codeql]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     outputs:
@@ -115,3 +221,4 @@ jobs:
           git add README.md
           git diff --cached --quiet || git commit -m "docs: update README with latest deployment info [skip ci]"
           git push
+

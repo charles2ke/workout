@@ -1,6 +1,7 @@
 /** @type {import('jest').Config} */
 module.exports = {
   testEnvironment: "jsdom",
+  testPathIgnorePatterns: ["/node_modules/", "/tests/e2e/"],
   collectCoverageFrom: ["workout.js"],
   coverageThreshold: {
     global: {
