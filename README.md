@@ -1,13 +1,11 @@
 # 7-Day Longevity & Strength Program
 
-[![CI/CD Status](https://github.com/charles2ke/workout/actions/workflows/deploy.yml/badge.svg)](https://github.com/charles2ke/workout/actions/workflows/deploy.yml)
+[![CI/CD Status](https://github.com/charles2ke/workout/actions/workflows/deploy.yml/badge.svg?branch=main)](https://github.com/charles2ke/workout/actions/workflows/deploy.yml)
 [![GitHub Pages](https://img.shields.io/website?label=GitHub%20Pages&url=https%3A%2F%2Fcharles2ke.github.io%2Fworkout%2F)](https://charles2ke.github.io/workout/)
 
 A lightweight, browser-only weekly workout planner. No frameworks, no build step — just HTML, CSS, and vanilla JavaScript served as a static site via GitHub Pages.
 
 ## Live Site
-
-[https://charles2ke.github.io/workout/](https://charles2ke.github.io/workout/)
 
 <!-- PAGES_URL_START -->
 [https://charles2ke.github.io/workout/](https://charles2ke.github.io/workout/)
