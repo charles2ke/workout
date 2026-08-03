@@ -11,7 +11,7 @@ const htmlPath = path.join(__dirname, "workout.html");
 const htmlContent = fs.readFileSync(htmlPath, "utf8");
 const bodyMatch = htmlContent.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
 const domBody = bodyMatch
-  ? bodyMatch[1].replace(/<script[\s\S]*?<\/script>/gi, "")
+  ? bodyMatch[1].replace(/<script[\s\S]*?<\/script\s*>/gi, "")
   : "";
 
 // ---------------------------------------------------------------------------
