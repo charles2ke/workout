@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>7-Day Longevity & Strength Program</title>
+  <style>
+    :root {
+      --bg-color: #0f172a;
+      --card-bg: #1e293b;
+      --accent: #38bdf8;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border-color: #334155;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    body { background-color: var(--bg-color); color: var(--text-main); line-height: 1.5; padding: 20px; }
+    .container { max-width: 900px; margin: 0 auto; }
+    
+    header { text-align: center; padding-bottom: 20px; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); }
+    h1 { font-size: 1.8rem; color: #fff; margin-bottom: 6px; }
+    .stats-bar { font-size: 0.9rem; color: var(--text-muted); }
+    .stats-bar span { color: var(--accent); font-weight: 600; }
+
+    /* Day Navigation */
+    .nav-tabs { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 25px; }
+    .tab-btn {
+      background-color: var(--card-bg); color: var(--text-muted);
+      border: 1px solid var(--border-color); padding: 8px 14px;
+      border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s;
+    }
+    .tab-btn:hover, .tab-btn.active { background-color: var(--accent); color: #0f172a; border-color: var(--accent); }
+
+    /* Day Sections */
+    .day-section { display: none; }
+    .day-section.active { display: block; }
+    .day-header { margin-bottom: 20px; }
+    .day-title { font-size: 1.4rem; color: var(--accent); }
+    .day-desc { color: var(--text-muted); font-size: 0.9rem; }
+
+    /* Grid */
+    .exercise-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+    .exercise-card { background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: 10px; overflow: hidden; }
+    .svg-container { width: 100%; height: 140px; background-color: #0b1120; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid var(--border-color); }
+    .exercise-info { padding: 14px; }
+    .exercise-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 6px; }
+    .exercise-stats { font-size: 0.85rem; color: var(--accent); font-weight: 600; margin-bottom: 8px; }
+    .exercise-notes { font-size: 0.85rem; color: var(--text-muted); }
+
+    footer { text-align: center; margin-top: 30px; padding-top: 15px; border-top: 1px solid var(--border-color); color: var(--text-muted); font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <h1>7-Day Longevity & Strength Program</h1>
+      <div class="stats-bar">
+        Profile: <span>42 Yrs</span> | Height: <span>5'11"</span> | Weight: <span>77 kg</span>
+      </div>
+    </header>
+
+    <div class="nav-tabs">
+      <button class="tab-btn active" onclick="showDay('mon', this)">Mon</button>
+      <button class="tab-btn" onclick="showDay('tue', this)">Tue</button>
+      <button class="tab-btn" onclick="showDay('wed', this)">Wed</button>
+      <button class="tab-btn" onclick="showDay('thu', this)">Thu</button>
+      <button class="tab-btn" onclick="showDay('fri', this)">Fri</button>
+      <button class="tab-btn" onclick="showDay('sat', this)">Sat</button>
+      <button class="tab-btn" onclick="showDay('sun', this)">Sun</button>
+    </div>
+
+    <!-- MONDAY -->
+    <div id="mon" class="day-section active">
+      <div class="day-header">
+        <h2 class="day-title">Monday: Upper Body Push & Pull</h2>
+        <p class="day-desc">Upper body strength and joint stability.</p>
+      </div>
+      <div class="exercise-grid">
+        <div class="exercise-card">
+          <div class="svg-container">
+            <svg viewBox="0 0 100 60" width="100%" height="100%">
+              <rect x="15" y="42" width="70" height="4" fill="#475569"/>
+              <circle cx="25" cy="35" r="5" fill="#38bdf8"/>
+              <line x1="28" y1="37" x2="65" y2="37" stroke="#38bdf8" stroke-width="4"/>
+              <line x1="45" y1="15" x2="45" y2="35" stroke="#cbd5e1" stroke-width="3"/>
+            </svg>
+          </div>
+          <div class="exercise-info">
+            <div class="exercise-title">Bench Press / Push-ups</div>
+            <div class="exercise-stats">3 Sets • 8–12 Reps • 90s Rest</div>
+            <p class="exercise-notes">Retract shoulder blades; elbows tucked at 45°.</p>
+          </div>
+        </div>
+        <div class="exercise-card">
+          <div class="svg-container">
+            <svg viewBox="0 0 100 60" width="100%" height="100%">
+              <line x1="20" y1="10" x2="80" y2="10" stroke="#cbd5e1" stroke-width="3"/>
+              <circle cx="50" cy="28" r="5" fill="#38bdf8"/>
+              <line x1="50" y1="33" x2="50" y2="52" stroke="#38bdf8" stroke-width="4"/>
+              <path d="M 50 35 L 30 20 M 50 35 L 70 20" stroke="#38bdf8" stroke-width="3"/>
+            </svg>
+          </div>
+          <div class="exercise-info">
+            <div class="exercise-title">Lat Pulldowns / Pull-ups</div>
+            <div class="exercise-stats">3 Sets • 8–10 Reps • 90s Rest</div>
+            <p class="exercise-notes">Drive with elbows down smoothly to upper chest.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TUESDAY -->
+    <div id="tue" class="day-section">
+      <div class="day-header">
+        <h2 class="day-title">Tuesday: Lower Body & Core</h2>
+        <p class="day-desc">Leg power with spine protection.</p>
+      </div>
+      <div class="exercise-grid">
+        <div class="exercise-card">
+          <div class="svg-container">
+            <svg viewBox="0 0 100 60" width="100%" height="100%">
+              <circle cx="40" cy="20" r="5" fill="#38bdf8"/>
+              <path d="M 40 25 L 40 38 L 25 45 L 25 58" stroke="#38bdf8" stroke-width="4" fill="none"/>
+              <circle cx="48" cy="28" r="4" fill="#cbd5e1"/>
+            </svg>
+          </div>
+          <div class="exercise-info">
+            <div class="exercise-title">Goblet Squats</div>
+            <div class="exercise-stats">3 Sets • 10–12 Reps • 90s Rest</div>
+            <p class="exercise-notes">Upright chest, sit between hips, knees out.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WEDNESDAY -->
+    <div id="wed" class="day-section">
+      <div class="day-header">
+        <h2 class="day-title">Wednesday: Active Recovery</h2>
+        <p class="day-desc">Aerobic base and joint mobility work.</p>
+      </div>
+      <div class="exercise-grid">
+        <div class="exercise-card">
+          <div class="svg-container">
+            <svg viewBox="0 0 100 60" width="100%" height="100%">
+              <path d="M 10 30 Q 30 10 50 30 T 90 30" fill="none" stroke="#38bdf8" stroke-width="3"/>
+              <circle cx="50" cy="30" r="4" fill="#f8fafc"/>
+            </svg>
+          </div>
+          <div class="exercise-info">
+            <div class="exercise-title">Zone 2 Cardio</div>
+            <div class="exercise-stats">30 Mins • HR 105–120 BPM</div>
+            <p class="exercise-notes">Brisk walk, light cycling, or light rowing.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- THURSDAY -->
+    <div id="thu" class="day-section">
+      <div class="day-header">
+        <h2 class="day-title">Thursday: Upper Body Hypertrophy</h2>
+        <p class="day-desc">Posture strengthening and back alignment.</p>
+      </div>
+      <div class="exercise-grid">
+        <div class="exercise-card">
+          <div class="svg-container">
+            <svg viewBox="0 0 100 60" width="100%" height="100%">
+              <rect x="20" y="38" width="45" height="4" fill="#475569"/>
+              <circle cx="30" cy="20" r="5" fill="#38bdf8"/>
+              <path d="M 45 28 L 45 42" stroke="#38bdf8" stroke-width="3"/>
+            </svg>
+          </div>
+          <div class="exercise-info">
+            <div class="exercise-title">Single-Arm DB Rows</div>
+            <div class="exercise-stats">3 Sets • 10 Reps/side • 60s Rest</div>
+            <p class="exercise-notes">Pull dumbbell to hip, keeping elbow close.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FRIDAY -->
+    <div id="fri" class="day-section">
+      <div class="day-header">
+        <h2 class="day-title">Friday: Lower Body & Posterior Chain</h2>
+        <p class="day-desc">Glutes and hamstrings for joint support.</p>
+      </div>
+      <div class="exercise-grid">
+        <div class="exercise-card">
+          <div class="svg-container">
+            <svg viewBox="0 0 100 60" width="100%" height="100%">
+              <rect x="70" y="38" width="20" height="4" fill="#475569"/>
+              <circle cx="42" cy="18" r="5" fill="#38bdf8"/>
+              <path d="M 42 23 L 42 40 L 35 58" stroke="#38bdf8" stroke-width="4" fill="none"/>
+            </svg>
+          </div>
+          <div class="exercise-info">
+            <div class="exercise-title">Bulgarian Split Squats</div>
+            <div class="exercise-stats">3 Sets • 8 Reps/leg • 90s Rest</div>
+            <p class="exercise-notes">Keep front foot flat; controls hip stability.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SATURDAY -->
+    <div id="sat" class="day-section">
+      <div class="day-header">
+        <h2 class="day-title">Saturday: Full Body Conditioning</h2>
+        <p class="day-desc">Endurance circuit and core strength.</p>
+      </div>
+      <div class="exercise-grid">
+        <div class="exercise-card">
+          <div class="svg-container">
+            <svg viewBox="0 0 100 60" width="100%" height="100%">
+              <circle cx="50" cy="18" r="5" fill="#38bdf8"/>
+              <path d="M 40 48 Q 55 48 70 28" stroke="#f8fafc" stroke-width="2" stroke-dasharray="2,2" fill="none"/>
+              <circle cx="70" cy="28" r="4" fill="#38bdf8"/>
+            </svg>
+          </div>
+          <div class="exercise-info">
+            <div class="exercise-title">Kettlebell Swings</div>
+            <div class="exercise-stats">3 Rounds • 12–15 Reps</div>
+            <p class="exercise-notes">Explode from the hips; power comes from glutes.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUNDAY -->
+    <div id="sun" class="day-section">
+      <div class="day-header">
+        <h2 class="day-title">Sunday: Rest & Recovery</h2>
+        <p class="day-desc">Full rest day for total muscle recovery.</p>
+      </div>
+      <div class="exercise-grid">
+        <div class="exercise-card">
+          <div class="svg-container">
+            <svg viewBox="0 0 100 60" width="100%" height="100%">
+              <rect x="25" y="38" width="50" height="12" rx="6" fill="#475569"/>
+              <circle cx="50" cy="28" r="5" fill="#38bdf8"/>
+            </svg>
+          </div>
+          <div class="exercise-info">
+            <div class="exercise-title">Foam Rolling & Walk</div>
+            <div class="exercise-stats">15–20 Mins • Light Pressure</div>
+            <p class="exercise-notes">Focus on upper back, quads, and calves.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <p><strong>Golden Rule:</strong> Keep 1–2 reps in reserve on all compound lifts to protect joints and ensure consistent progress.</p>
+    </footer>
+  </div>
+
+  <script>
+    function showDay(dayId, btn) {
+      document.querySelectorAll('.day-section').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById(dayId).classList.add('active');
+      btn.classList.add('active');
+    }
+  </script>
+</body>
+</html>
