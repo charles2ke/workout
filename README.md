@@ -10,13 +10,13 @@ A lightweight, browser-only weekly workout planner. No frameworks, no build step
 [https://charles2ke.github.io/workout/](https://charles2ke.github.io/workout/)
 
 <!-- PAGES_URL_START -->
-_Not yet deployed._
+[https://charles2ke.github.io/workout/](https://charles2ke.github.io/workout/)
 <!-- PAGES_URL_END -->
 
 ## Last Deployed
 
 <!-- LAST_DEPLOYED_START -->
-_Never_
+2026-08-03 08:47 UTC
 <!-- LAST_DEPLOYED_END -->
 
 ## Features
