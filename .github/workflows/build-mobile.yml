@@ -55,6 +55,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Prepare web assets
+        run: |
+          mkdir -p dist
+          cp index.html workout.html workout.js dist/
+
       - name: Add Android platform
         run: |
           npx cap add android
@@ -74,6 +79,10 @@ jobs:
       - name: Build debug APK (always)
         run: cd android && ./gradlew assembleDebug --no-daemon
 
+      - name: Build release APK
+        if: ${{ secrets.ANDROID_KEYSTORE != '' }}
+        run: cd android && ./gradlew assembleRelease --no-daemon
+
       - name: Build release AAB
         run: cd android && ./gradlew bundleRelease --no-daemon
         continue-on-error: true
@@ -82,7 +91,7 @@ jobs:
         if: ${{ secrets.ANDROID_KEYSTORE != '' }}
         uses: r0adkll/sign-android-release@v1
         with:
-          releaseDirectory: android/app/build/outputs/apk/debug
+          releaseDirectory: android/app/build/outputs/apk/release
           signingKeyBase64: ${{ secrets.ANDROID_KEYSTORE }}
           alias: ${{ secrets.ANDROID_KEY_ALIAS }}
           keyStorePassword: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -94,14 +103,14 @@ jobs:
           cp android/app/build/outputs/apk/debug/app-debug.apk \
              "workout-android-${TAG}.apk" || true
           cp android/app/build/outputs/bundle/release/app-release.aab \
-             "workout-android-auto-${TAG}.aab" 2>/dev/null || true
+             "workout-android-${TAG}.aab" 2>/dev/null || true
 
       - name: Upload Android artifacts to release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             workout-android-*.apk
-            workout-android-auto-*.aab
+            workout-android-*.aab
 
   # ────────────────────────────────────────────────────────────────────────────
   # iOS + iPadOS  (same IPA covers both)  +  watchOS companion
@@ -120,6 +129,11 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Prepare web assets
+        run: |
+          mkdir -p dist
+          cp index.html workout.html workout.js dist/
 
       - name: Add iOS platform
         run: |
@@ -241,7 +255,8 @@ jobs:
         run: |
           TAG="${{ github.event.release.tag_name }}"
           mkdir -p garmin-builds
-          for device in fenix7 forerunner955 venu2 vivoactive4 epix2; do
+          DEVICES=$(grep -oP 'id="\K[^"]+' garmin/manifest.xml)
+          for device in $DEVICES; do
             echo "▶ Building for $device…"
             monkeyc \
               -f garmin/monkey.jungle \
