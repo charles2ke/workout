@@ -1,0 +1,24 @@
+# XcodeGen project spec for the Workout watchOS companion app.
+# Build: cd watchos && xcodegen generate
+name: WorkoutWatch
+options:
+  bundleIdPrefix: com.charles2ke
+  deploymentTarget:
+    watchOS: "9.0"
+  xcodeVersion: "15.0"
+
+targets:
+  WorkoutWatch:
+    type: watchos-app
+    platform: watchOS
+    deploymentTarget: "9.0"
+    sources:
+      - Sources
+    settings:
+      base:
+        PRODUCT_NAME: WorkoutWatch
+        PRODUCT_BUNDLE_IDENTIFIER: com.charles2ke.workout.watch
+        INFOPLIST_FILE: Sources/Info.plist
+        SWIFT_VERSION: "5.9"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ENABLE_PREVIEWS: YES

@@ -9,6 +9,10 @@
     "serve": "serve -l 8080"
   },
   "devDependencies": {
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/cli": "^7.0.0",
+    "@capacitor/core": "^7.0.0",
+    "@capacitor/ios": "^7.0.0",
     "@playwright/test": "^1.62.1",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",

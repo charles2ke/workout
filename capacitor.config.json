@@ -1,0 +1,16 @@
+{
+  "appId": "com.charles2ke.workout",
+  "appName": "Workout",
+  "webDir": "dist",
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 0
+    }
+  },
+  "ios": {
+    "contentInset": "automatic"
+  },
+  "android": {
+    "allowMixedContent": false
+  }
+}
