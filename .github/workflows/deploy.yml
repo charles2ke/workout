@@ -1,0 +1,117 @@
+name: CI & Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+  security-events: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  lint:
+    name: HTML Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install htmlhint
+        run: npm install -g htmlhint
+
+      - name: Lint HTML files
+        run: htmlhint "**/*.html"
+
+  codeql:
+    name: CodeQL Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: [lint, codeql]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    outputs:
+      page_url: ${{ steps.deployment.outputs.page_url }}
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  update-readme:
+    name: Update README
+    needs: deploy
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Patch README with deployment info
+        env:
+          PAGES_URL: ${{ needs.deploy.outputs.page_url }}
+        run: |
+          python3 - <<'EOF'
+          import os, re
+
+          url = os.environ.get("PAGES_URL", "")
+          timestamp = os.popen("date -u '+%Y-%m-%d %H:%M UTC'").read().strip()
+
+          with open("README.md", "r") as f:
+              content = f.read()
+
+          content = re.sub(
+              r"<!-- PAGES_URL_START -->.*?<!-- PAGES_URL_END -->",
+              f"<!-- PAGES_URL_START -->\n[{url}]({url})\n<!-- PAGES_URL_END -->",
+              content,
+              flags=re.DOTALL,
+          )
+          content = re.sub(
+              r"<!-- LAST_DEPLOYED_START -->.*?<!-- LAST_DEPLOYED_END -->",
+              f"<!-- LAST_DEPLOYED_START -->\n{timestamp}\n<!-- LAST_DEPLOYED_END -->",
+              content,
+              flags=re.DOTALL,
+          )
+
+          with open("README.md", "w") as f:
+              f.write(content)
+          EOF
+
+      - name: Commit updated README
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git diff --cached --quiet || git commit -m "docs: update README with latest deployment info [skip ci]"
+          git push
