@@ -82,6 +82,29 @@
       opacity: 0.6;
     }
 
+    .profile-reset-btn {
+      background: none;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 0.78rem;
+      padding: 3px 8px;
+      line-height: 1.4;
+      white-space: nowrap;
+    }
+
+    .profile-reset-btn:hover {
+      background-color: var(--danger);
+      border-color: var(--danger);
+      color: #fff;
+    }
+
+    .profile-reset-btn:focus-visible {
+      outline: 2px solid var(--focus-ring);
+      outline-offset: 2px;
+    }
+
     /* ===== Controls ===== */
     .controls-panel {
       display: grid;
@@ -324,6 +347,8 @@
           <label class="profile-field" for="height-input">Height <input id="height-input" type="text" value="5'11&quot;" aria-label="Height"></label>
           <span class="profile-sep" aria-hidden="true">|</span>
           <label class="profile-field" for="weight-input">Weight <input id="weight-input" type="number" min="1" max="500" step="0.1" value="77" aria-label="Weight in kilograms"></label>
+          <span class="profile-sep" aria-hidden="true">|</span>
+          <button type="button" id="reset-profile-btn" class="profile-reset-btn" aria-label="Reset profile to default values">Reset</button>
         </div>
       </div>
     </header>
@@ -823,6 +848,17 @@
     weightInput.addEventListener("input", applyProfilePreferences);
     notesToggle.addEventListener("change", applyVisibilityPreferences);
     difficultyToggle.addEventListener("change", applyVisibilityPreferences);
+
+    const PROFILE_DEFAULTS = { name: "Tito", age: "42", ethnicity: "Indian", height: "5'11\"", weight: "77" };
+
+    document.getElementById("reset-profile-btn").addEventListener("click", function () {
+      nameInput.value = PROFILE_DEFAULTS.name;
+      ageInput.value = PROFILE_DEFAULTS.age;
+      ethnicityInput.value = PROFILE_DEFAULTS.ethnicity;
+      heightInput.value = PROFILE_DEFAULTS.height;
+      weightInput.value = PROFILE_DEFAULTS.weight;
+      applyProfilePreferences();
+    });
 
     // ===== Rest Timer =====
     const restSecondsInput = document.getElementById("rest-seconds");
