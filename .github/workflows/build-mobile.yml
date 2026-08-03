@@ -37,6 +37,11 @@ jobs:
   build-android:
     name: Build Android + Android Auto
     runs-on: ubuntu-latest
+    env:
+      ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
 
@@ -79,14 +84,14 @@ jobs:
         continue-on-error: true
 
       - name: Sign release APK
-        if: ${{ secrets.ANDROID_KEYSTORE != '' }}
+        if: ${{ env.ANDROID_KEYSTORE != '' }}
         uses: r0adkll/sign-android-release@v1
         with:
           releaseDirectory: android/app/build/outputs/apk/debug
-          signingKeyBase64: ${{ secrets.ANDROID_KEYSTORE }}
-          alias: ${{ secrets.ANDROID_KEY_ALIAS }}
-          keyStorePassword: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          keyPassword: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          signingKeyBase64: ${{ env.ANDROID_KEYSTORE }}
+          alias: ${{ env.ANDROID_KEY_ALIAS }}
+          keyStorePassword: ${{ env.ANDROID_KEYSTORE_PASSWORD }}
+          keyPassword: ${{ env.ANDROID_KEY_PASSWORD }}
 
       - name: Rename APK with version
         run: |
@@ -109,6 +114,10 @@ jobs:
   build-ios-watchos:
     name: Build iOS + iPadOS + watchOS
     runs-on: macos-latest
+    env:
+      APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+      APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+      APPLE_PROVISIONING_PROFILE: ${{ secrets.APPLE_PROVISIONING_PROFILE }}
     steps:
       - uses: actions/checkout@v4
 
@@ -142,11 +151,7 @@ jobs:
             CODE_SIGNING_ALLOWED=NO
 
       - name: Archive signed iOS + iPadOS IPA
-        if: ${{ secrets.APPLE_CERTIFICATE != '' }}
-        env:
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_PROVISIONING_PROFILE: ${{ secrets.APPLE_PROVISIONING_PROFILE }}
+        if: ${{ env.APPLE_CERTIFICATE != '' }}
         run: |
           echo "$APPLE_CERTIFICATE" | base64 --decode > certificate.p12
           security create-keychain -p "ci" build.keychain
@@ -192,13 +197,13 @@ jobs:
             CODE_SIGNING_ALLOWED=NO
 
       - name: Rename IPA with version
-        if: ${{ secrets.APPLE_CERTIFICATE != '' }}
+        if: ${{ env.APPLE_CERTIFICATE != '' }}
         run: |
           TAG="${{ github.event.release.tag_name }}"
           cp ios/App/export/*.ipa "workout-ios-ipados-${TAG}.ipa" || true
 
       - name: Upload iOS + iPadOS IPA to release
-        if: ${{ secrets.APPLE_CERTIFICATE != '' }}
+        if: ${{ env.APPLE_CERTIFICATE != '' }}
         uses: softprops/action-gh-release@v2
         with:
           files: workout-ios-ipados-*.ipa
@@ -209,27 +214,42 @@ jobs:
   build-garmin:
     name: Build Garmin Connect IQ
     runs-on: ubuntu-latest
-    if: ${{ secrets.CIQ_SDK_URL != '' }}
+    env:
+      CIQ_SDK_URL: ${{ secrets.CIQ_SDK_URL }}
+      GARMIN_DEV_KEY_B64: ${{ secrets.GARMIN_DEV_KEY_B64 }}
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check Garmin SDK configuration
+        id: garmin-config
+        run: |
+          if [ -n "$CIQ_SDK_URL" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "Skipping Garmin build because CIQ_SDK_URL is not configured."
+          fi
+
       - name: Set up JDK 17
+        if: ${{ steps.garmin-config.outputs.enabled == 'true' }}
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
 
       - name: Download Connect IQ SDK
+        if: ${{ steps.garmin-config.outputs.enabled == 'true' }}
         run: |
-          wget -q "${{ secrets.CIQ_SDK_URL }}" -O ciq-sdk.zip
+          wget -q "$CIQ_SDK_URL" -O ciq-sdk.zip
           unzip -q ciq-sdk.zip -d "$HOME/ciq-sdk"
           chmod +x "$HOME/ciq-sdk/bin/monkeyc"
           echo "$HOME/ciq-sdk/bin" >> "$GITHUB_PATH"
 
       - name: Set up developer key
+        if: ${{ steps.garmin-config.outputs.enabled == 'true' }}
         run: |
-          if [ -n "${{ secrets.GARMIN_DEV_KEY_B64 }}" ]; then
-            echo "${{ secrets.GARMIN_DEV_KEY_B64 }}" | base64 --decode > developer_key.der
+          if [ -n "$GARMIN_DEV_KEY_B64" ]; then
+            echo "$GARMIN_DEV_KEY_B64" | base64 --decode > developer_key.der
           else
             # Temporary key for CI smoke-build (apps won't be distributable)
             openssl genrsa -out developer_key.pem 4096 2>/dev/null
@@ -238,6 +258,7 @@ jobs:
           fi
 
       - name: Build Garmin app for all supported devices
+        if: ${{ steps.garmin-config.outputs.enabled == 'true' }}
         run: |
           TAG="${{ github.event.release.tag_name }}"
           mkdir -p garmin-builds
@@ -251,7 +272,7 @@ jobs:
           done
 
       - name: Upload Garmin .prg files to release
-        if: ${{ secrets.GARMIN_DEV_KEY_B64 != '' }}
+        if: ${{ steps.garmin-config.outputs.enabled == 'true' && env.GARMIN_DEV_KEY_B64 != '' }}
         uses: softprops/action-gh-release@v2
         with:
           files: garmin-builds/*.prg
