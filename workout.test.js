@@ -305,6 +305,10 @@ describe("workout.js", () => {
       expect(getTodayDayId(new Date("2026-08-08T09:00:00"))).toBe("sat");
     });
 
+    test("getTodayDayId falls back to first workout day for out-of-range getDay()", () => {
+      expect(getTodayDayId({ getDay: () => 99 })).toBe("mon");
+    });
+
     test("getLocalDateKey returns YYYY-MM-DD in local time", () => {
       expect(getLocalDateKey(new Date("2026-08-03T09:00:00"))).toBe("2026-08-03");
     });
