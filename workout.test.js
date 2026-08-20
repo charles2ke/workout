@@ -173,8 +173,11 @@ describe("workout.js", () => {
     test("renders 7 day panels", () =>
       expect(document.querySelectorAll(".day-section").length).toBe(7));
 
-    test("first tab is active by default", () =>
-      expect(document.querySelector(".tab-btn").classList.contains("active")).toBe(true));
+    test("first tab is active when today is Monday", () => {
+      jest.useFakeTimers().setSystemTime(new Date("2026-08-03T09:00:00"));
+      resetAndLoad();
+      expect(document.querySelector(".tab-btn").classList.contains("active")).toBe(true);
+    });
 
     test("timer display shows HH:MM format", () =>
       expect(document.getElementById("timer-display").textContent).toMatch(/^\d{2}:\d{2}$/));
