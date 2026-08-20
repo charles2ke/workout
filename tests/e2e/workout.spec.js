@@ -79,7 +79,9 @@ test.describe("Workout App", () => {
 
   test("copy button shows Copied! feedback", async ({ page }) => {
     await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
-    const copyBtn = page.locator(".copy-btn").first();
+    // The active day depends on the current date, so scope to the visible panel
+    await page.locator("#tab-mon").click();
+    const copyBtn = page.locator("#panel-mon .copy-btn").first();
     await copyBtn.click();
     await expect(copyBtn).toHaveText("Copied!");
     await page.screenshot({ path: "playwright-screenshots/11-copy-feedback.png" });
