@@ -81,9 +81,13 @@ describe("workout.js", () => {
   let formatSeconds, storage, createSvg, activateDay, getTodayDayId, getLocalDateKey;
 
   beforeAll(() => {
+    // Fix the system date to a Monday so the module's default-day-selection
+    // logic (based on the current date) is deterministic across test runs.
+    jest.useFakeTimers().setSystemTime(new Date("2026-08-03T09:00:00"));
     setupEnv();
     const exports = loadModule();
     ({ formatSeconds, storage, createSvg, activateDay, getTodayDayId, getLocalDateKey } = exports._test);
+    jest.useRealTimers();
   });
 
   afterEach(() => {

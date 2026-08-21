@@ -79,7 +79,7 @@ test.describe("Workout App", () => {
 
   test("copy button shows Copied! feedback", async ({ page }) => {
     await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
-    const copyBtn = page.locator(".copy-btn").first();
+    const copyBtn = page.locator(".day-section.active .copy-btn").first();
     await copyBtn.click();
     await expect(copyBtn).toHaveText("Copied!");
     await page.screenshot({ path: "playwright-screenshots/11-copy-feedback.png" });
