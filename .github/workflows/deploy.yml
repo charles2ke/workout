@@ -32,6 +32,9 @@ jobs:
   test:
     name: Unit & E2E Tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
     steps:
       - uses: actions/checkout@v4
 
@@ -72,7 +75,7 @@ jobs:
           retention-days: 30
 
       - name: Post PR comment with screenshot links
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
         uses: actions/github-script@v7
         with:
           script: |
