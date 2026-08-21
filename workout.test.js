@@ -173,11 +173,12 @@ describe("workout.js", () => {
     test("renders 7 day panels", () =>
       expect(document.querySelectorAll(".day-section").length).toBe(7));
 
-    test("first tab is active when today is the first workout day", () => {
-      // 2026-08-03 is a Monday, the first workout day
-      jest.useFakeTimers().setSystemTime(new Date("2026-08-03T09:00:00"));
+    test("today's tab is active by default", () => {
+      jest.useFakeTimers().setSystemTime(new Date("2026-08-05T09:00:00"));
       resetAndLoad();
-      expect(document.querySelector(".tab-btn").classList.contains("active")).toBe(true);
+      const activeTabs = document.querySelectorAll(".tab-btn.active");
+      expect(activeTabs.length).toBe(1);
+      expect(activeTabs[0].dataset.day).toBe(getTodayDayId());
     });
 
     test("timer display shows HH:MM format", () =>
