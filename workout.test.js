@@ -174,9 +174,11 @@ describe("workout.js", () => {
       expect(document.querySelectorAll(".day-section").length).toBe(7));
 
     test("today's tab is active by default", () => {
-      const activeTab = document.querySelector(".tab-btn.active");
-      expect(activeTab).not.toBeNull();
-      expect(activeTab.dataset.day).toBe(getTodayDayId());
+      jest.useFakeTimers().setSystemTime(new Date("2026-08-05T09:00:00"));
+      resetAndLoad();
+      const activeTabs = document.querySelectorAll(".tab-btn.active");
+      expect(activeTabs.length).toBe(1);
+      expect(activeTabs[0].dataset.day).toBe(getTodayDayId());
     });
 
     test("timer display shows HH:MM format", () =>
