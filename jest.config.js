@@ -2,7 +2,7 @@
 module.exports = {
   testEnvironment: "jsdom",
   testPathIgnorePatterns: ["/node_modules/", "/tests/e2e/"],
-  collectCoverageFrom: ["workout.js"],
+  collectCoverageFrom: ["workout.js", "fitness.js"],
   coverageThreshold: {
     global: {
       lines: 100,

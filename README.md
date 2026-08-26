@@ -18,7 +18,14 @@ A lightweight, browser-only weekly workout planner. No frameworks, no build step
 2026-08-21 08:04 UTC
 <!-- LAST_DEPLOYED_END -->
 
+## Pages
+
+- **Workout Program** (`workout.html`) — the 7-day training plan
+- **My Fitness** (`fitness.html`) — health dashboard that pulls in Google Health and Garmin data
+
 ## Features
+
+### Workout program
 
 - **7-day program** — structured daily workouts covering upper body push/pull, lower body, active recovery, hypertrophy, posterior chain, full-body conditioning, and rest
 - **Exercise cards** — each card shows sets/reps, difficulty, coaching notes, and an inline SVG illustration
@@ -29,6 +36,15 @@ A lightweight, browser-only weekly workout planner. No frameworks, no build step
 - **Keyboard navigation** — full arrow-key support on the day tabs (ARIA tablist pattern)
 - **Accessibility** — skip link, ARIA roles, live regions, and focus-visible styles throughout
 - **Responsive** — mobile-first layout with a print stylesheet
+
+### My Fitness
+
+- **Google Health source** — import a Google Health Connect / Google Fit export (JSON or CSV) to pull in steps, resting heart rate, sleep, and active calories
+- **Garmin source** — import a Garmin Connect export (JSON or CSV), including VO2 max when present
+- **Sample data** — one-click sample data per source to preview the dashboard
+- **Summary metrics** — days tracked, average steps, average resting heart rate, average sleep, total active calories, and latest VO2 max
+- **Daily records table** — merged, newest-first view of the 30 most recent days across both sources
+- **Local only** — files are parsed in the browser and connections persist in `localStorage`; no data leaves the device
 
 ## Tech Stack
 
