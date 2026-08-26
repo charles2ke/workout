@@ -15,7 +15,7 @@ A lightweight, browser-only weekly workout planner. No frameworks, no build step
 ## Last Deployed
 
 <!-- LAST_DEPLOYED_START -->
-2026-08-03 08:47 UTC
+2026-08-21 08:04 UTC
 <!-- LAST_DEPLOYED_END -->
 
 ## Features
