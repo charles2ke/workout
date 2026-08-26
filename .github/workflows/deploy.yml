@@ -78,6 +78,7 @@ jobs:
     permissions:
       contents: read
       issues: write
+      pull-requests: write
     steps:
       - name: Post PR comment with screenshot links
         uses: actions/github-script@v7
