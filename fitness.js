@@ -204,7 +204,7 @@ function collect(records, field) {
 
 function summarize(records) {
   const days = new Set(records.map((record) => record.date)).size;
-  const vo2Values = collect(records, "vo2Max");
+  const latestVo2Record = sortRecords(records).find((record) => typeof record.vo2Max === "number");
 
   return {
     days,
@@ -212,7 +212,7 @@ function summarize(records) {
     avgRestingHeartRate: average(collect(records, "restingHeartRate")),
     avgSleepHours: average(collect(records, "sleepHours")),
     totalActiveCalories: collect(records, "activeCalories").reduce((sum, value) => sum + value, 0),
-    latestVo2Max: vo2Values.length > 0 ? vo2Values[0] : null
+    latestVo2Max: latestVo2Record ? latestVo2Record.vo2Max : null
   };
 }
 

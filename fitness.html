@@ -279,35 +279,35 @@
       <a href="fitness.html" aria-current="page">My Fitness</a>
     </nav>
 
-    <section class="sources-grid" aria-label="Health data sources">
-      <article class="source-card">
-        <h2>Google Health</h2>
-        <p class="source-desc">Pull steps, sleep, resting heart rate, and calories from a Google Health Connect / Google Fit export (JSON or CSV).</p>
-        <p class="source-status" id="google-status" role="status">Not connected.</p>
-        <div class="source-actions">
-          <label class="file-label button" for="google-file">Import Google export
-            <input type="file" id="google-file" accept=".json,.csv,application/json,text/csv" aria-label="Import Google Health export file">
-          </label>
-          <button type="button" class="button secondary" id="google-sample">Load sample</button>
-          <button type="button" class="button danger" id="google-disconnect">Disconnect</button>
-        </div>
-      </article>
-
-      <article class="source-card">
-        <h2>Garmin</h2>
-        <p class="source-desc">Pull daily summaries from a Garmin Connect export (JSON or CSV), including VO2 max and body battery when present.</p>
-        <p class="source-status" id="garmin-status" role="status">Not connected.</p>
-        <div class="source-actions">
-          <label class="file-label button" for="garmin-file">Import Garmin export
-            <input type="file" id="garmin-file" accept=".json,.csv,application/json,text/csv" aria-label="Import Garmin Connect export file">
-          </label>
-          <button type="button" class="button secondary" id="garmin-sample">Load sample</button>
-          <button type="button" class="button danger" id="garmin-disconnect">Disconnect</button>
-        </div>
-      </article>
-    </section>
-
     <main id="fitness-content">
+      <section class="sources-grid" aria-label="Health data sources">
+        <article class="source-card">
+          <h2>Google Health</h2>
+          <p class="source-desc">Pull steps, sleep, resting heart rate, and calories from a Google Health Connect / Google Fit export (JSON or CSV).</p>
+          <p class="source-status" id="google-status" role="status">Not connected.</p>
+          <div class="source-actions">
+            <label class="file-label button" for="google-file">Import Google export
+              <input type="file" id="google-file" accept=".json,.csv,application/json,text/csv" aria-label="Import Google Health export file">
+            </label>
+            <button type="button" class="button secondary" id="google-sample">Load sample</button>
+            <button type="button" class="button danger" id="google-disconnect">Disconnect</button>
+          </div>
+        </article>
+
+        <article class="source-card">
+          <h2>Garmin</h2>
+          <p class="source-desc">Pull daily summaries from a Garmin Connect export (JSON or CSV), including VO2 max and body battery when present.</p>
+          <p class="source-status" id="garmin-status" role="status">Not connected.</p>
+          <div class="source-actions">
+            <label class="file-label button" for="garmin-file">Import Garmin export
+              <input type="file" id="garmin-file" accept=".json,.csv,application/json,text/csv" aria-label="Import Garmin Connect export file">
+            </label>
+            <button type="button" class="button secondary" id="garmin-sample">Load sample</button>
+            <button type="button" class="button danger" id="garmin-disconnect">Disconnect</button>
+          </div>
+        </article>
+      </section>
+
       <section aria-label="Fitness summary">
         <div class="summary-grid" id="summary-grid"></div>
       </section>
