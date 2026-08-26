@@ -143,6 +143,37 @@
     }
 
     /* ===== Controls ===== */
+    .page-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin-bottom: 16px;
+    }
+
+    .page-nav a {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background-color: var(--card-bg);
+      color: var(--text-muted);
+      border: 1px solid var(--border-color);
+      padding: 8px 14px;
+      min-height: 44px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+
+    .page-nav a:hover,
+    .page-nav a[aria-current="page"] {
+      background-color: var(--accent);
+      color: #0b1120;
+      border-color: var(--accent);
+    }
+
     .controls-panel {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -352,6 +383,7 @@
       }
 
       .controls-panel,
+      .page-nav,
       .nav-tabs,
       .copy-btn {
         display: none !important;
@@ -405,6 +437,11 @@
         </div>
       </div>
     </header>
+
+    <nav class="page-nav" aria-label="Site pages">
+      <a href="workout.html" aria-current="page">Workout Program</a>
+      <a href="fitness.html">My Fitness</a>
+    </nav>
 
     <section class="controls-panel" aria-label="Workout controls">
       <article class="control-card">
