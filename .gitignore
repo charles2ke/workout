@@ -3,3 +3,5 @@ coverage/
 playwright-results/
 playwright-report/
 playwright-screenshots/
+dist/
+workout-site*.zip
