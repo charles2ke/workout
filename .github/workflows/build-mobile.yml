@@ -60,6 +60,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Build web assets
+        run: npm run build
+
       - name: Add Android platform
         run: |
           npx cap add android
@@ -101,8 +104,19 @@ jobs:
           cp android/app/build/outputs/bundle/release/app-release.aab \
              "workout-android-auto-${TAG}.aab" 2>/dev/null || true
 
+      - name: Upload Android build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apps
+          path: |
+            workout-android-*.apk
+            workout-android-auto-*.aab
+          if-no-files-found: warn
+          retention-days: 90
+
       - name: Upload Android artifacts to release
         uses: softprops/action-gh-release@v2
+        continue-on-error: true   # immutable releases reject new assets
         with:
           files: |
             workout-android-*.apk
@@ -129,6 +143,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Build web assets
+        run: npm run build
 
       - name: Add iOS platform
         run: |
@@ -202,9 +219,19 @@ jobs:
           TAG="${{ github.event.release.tag_name }}"
           cp ios/App/export/*.ipa "workout-ios-ipados-${TAG}.ipa" || true
 
+      - name: Upload iOS build artifact
+        if: ${{ env.APPLE_CERTIFICATE != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-ipados-app
+          path: workout-ios-ipados-*.ipa
+          if-no-files-found: warn
+          retention-days: 90
+
       - name: Upload iOS + iPadOS IPA to release
         if: ${{ env.APPLE_CERTIFICATE != '' }}
         uses: softprops/action-gh-release@v2
+        continue-on-error: true   # immutable releases reject new assets
         with:
           files: workout-ios-ipados-*.ipa
 
@@ -274,5 +301,6 @@ jobs:
       - name: Upload Garmin .prg files to release
         if: ${{ steps.garmin-config.outputs.enabled == 'true' && env.GARMIN_DEV_KEY_B64 != '' }}
         uses: softprops/action-gh-release@v2
+        continue-on-error: true   # immutable releases reject new assets
         with:
           files: garmin-builds/*.prg

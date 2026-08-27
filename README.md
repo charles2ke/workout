@@ -76,6 +76,15 @@ npm run serve
 
 Then open `http://localhost:8080` in your browser. The app redirects from `index.html` to `workout.html` automatically.
 
+### Build the static site
+
+```bash
+npm run build
+```
+
+Copies the web assets into `dist/`. The CI, release and mobile build pipelines all use this
+script, so `dist/` is the single source of truth for what gets packaged and shipped.
+
 ## Testing
 
 ### Unit tests (Jest)
