@@ -61,8 +61,8 @@ A lightweight, browser-only weekly workout planner. No frameworks, no bundler â€
 
 ```
 index.html         redirect to workout.html
-workout.html/.js   7-day training program
-fitness.html/.js   health dashboard
+workout.html, workout.js  7-day training program
+fitness.html, fitness.js  health dashboard
 scripts/           build-dist.mjs, Android/iOS build helpers
 tests/e2e/         Playwright specs
 garmin/            Connect IQ app (Monkey C)
