@@ -144,7 +144,7 @@ same `dist/` output; the watchOS and Garmin apps are built from their own native
 
 | Platform | Output | Notes |
 |---|---|---|
-| Android / Android Auto | `.apk` (+ `.aab` when the release bundle builds) | Capacitor shell; a debug APK is always produced and is signed with the Android signing secrets when they are set — the AAB is a best-effort `bundleRelease` and is not signed by the workflow |
+| Android / Android Auto | `.apk` (+ `.aab` when the release bundle builds) | Capacitor shell; a debug APK is always produced and uploaded/attached — signing with the Android signing secrets is attempted but the unsigned debug APK is still the file uploaded and attached to the release; the AAB is a best-effort `bundleRelease` and is not signed by the workflow |
 | iOS / iPadOS | `.ipa` | Capacitor shell; a simulator build always runs, an IPA is archived and attached to the release when the Apple signing secrets are set |
 | watchOS | Simulator build only | SwiftUI app in `watchos/`, project generated with XcodeGen; no artifact is uploaded |
 | Garmin Connect IQ | `.prg` per device | Monkey C app in `garmin/`; the job runs but skips its build steps unless `CIQ_SDK_URL` is configured, and the `.prg` files are attached to the release only when `GARMIN_DEV_KEY_B64` is also set |
