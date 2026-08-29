@@ -4,7 +4,7 @@
 [![Mobile Build](https://github.com/charles2ke/workout/actions/workflows/build-mobile.yml/badge.svg?branch=main)](https://github.com/charles2ke/workout/actions/workflows/build-mobile.yml)
 [![GitHub Pages](https://img.shields.io/website?label=GitHub%20Pages&url=https%3A%2F%2Fcharles2ke.github.io%2Fworkout%2F)](https://charles2ke.github.io/workout/)
 
-A lightweight, browser-only weekly workout planner. No frameworks, no bundler — just HTML, CSS, and vanilla JavaScript served as a static site via GitHub Pages, and packaged for Android, iOS/iPadOS, watchOS, and Garmin watches on every release.
+A lightweight, browser-only weekly workout planner. No frameworks, no bundler — just HTML, CSS, and vanilla JavaScript served as a static site via GitHub Pages, and packaged for Android, iOS/iPadOS, and watchOS on every release, with Garmin watches included when `CIQ_SDK_URL` is configured.
 
 ## Live Site
 
@@ -140,7 +140,7 @@ Two other workflows complete the pipeline:
 ## Native Apps
 
 Publishing a GitHub Release triggers `build-mobile.yml`, which packages the same `dist/` output for
-every supported platform and attaches the artifacts to the release:
+Android, iOS/iPadOS, and watchOS, and for Garmin watches when `CIQ_SDK_URL` is configured:
 
 | Platform | Output | Notes |
 |---|---|---|
