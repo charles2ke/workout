@@ -60,7 +60,7 @@ A lightweight, dependency-free weekly workout planner. No frameworks, no bundler
 ## Project Structure
 
 ```
-index.html         redirect to workout.html
+index.html         redirects to workout.html
 workout.html, workout.js  7-day training program
 fitness.html, fitness.js  health dashboard
 scripts/           build-dist.mjs, Android/iOS build helpers
@@ -120,17 +120,17 @@ npx playwright install chromium --with-deps   # first time only
 npm run test:e2e
 ```
 
-Playwright screenshots are saved to `playwright-screenshots/` and uploaded as a CI artifact on every pull request.
+Playwright screenshots are saved to `playwright-screenshots/` and uploaded as a CI artifact on every push and pull request.
 
 ## CI / CD
 
 Every push or pull request to `main` runs `.github/workflows/deploy.yml`:
 
-1. **HTML Lint** — runs `htmlhint` against all HTML files
-2. **Unit & E2E Tests** — Jest with coverage, then Playwright, uploading the screenshots and HTML report as artifacts
-3. **Post Playwright screenshots** — comments on the pull request with a link to the screenshot artifact
-4. **Deploy to GitHub Pages** — deploys on push to `main` (after lint + tests pass)
-5. **Package Site** — runs `npm run build` and uploads `dist/` as the `workout-site` artifact
+1. **HTML Lint** — runs `htmlhint` against all HTML files (push and pull request)
+2. **Unit & E2E Tests** — Jest with coverage, then Playwright, uploading the screenshots and HTML report as artifacts (push and pull request; the Playwright step is non-blocking)
+3. **Post Playwright screenshots** — pull requests only: comments on the pull request with a link to the screenshot artifact
+4. **Deploy to GitHub Pages** — pushes to `main` only, after lint + tests pass
+5. **Package Site** — pushes to `main` only: runs `npm run build` and uploads `dist/` zipped as the `workout-site` artifact
 
 Two other workflows complete the pipeline:
 
@@ -139,15 +139,15 @@ Two other workflows complete the pipeline:
 
 ## Native Apps
 
-Publishing a GitHub Release triggers `build-mobile.yml`, which packages the same `dist/` output for
-Android, iOS/iPadOS, and watchOS, and for Garmin watches when `CIQ_SDK_URL` is configured:
+Publishing a GitHub Release triggers `build-mobile.yml`. The Android and iOS/iPadOS shells wrap the
+same `dist/` output; the watchOS and Garmin apps are built from their own native sources:
 
 | Platform | Output | Notes |
 |---|---|---|
-| Android / Android Auto | `.apk` + `.aab` | Capacitor shell; an unsigned debug APK is always produced, a signed APK/AAB when the Android signing secrets are set |
-| iOS / iPadOS | `.ipa` | Capacitor shell; a simulator build always runs, an IPA is archived when the Apple signing secrets are set |
-| watchOS | Simulator build | SwiftUI app in `watchos/`, project generated with XcodeGen |
-| Garmin Connect IQ | `.prg` per device | Monkey C app in `garmin/`; the whole job is skipped unless `CIQ_SDK_URL` is configured |
+| Android / Android Auto | `.apk` (+ `.aab` when the release bundle builds) | Capacitor shell; a debug APK is always produced and is signed with the Android signing secrets when they are set — the AAB is a best-effort `bundleRelease` and is not signed by the workflow |
+| iOS / iPadOS | `.ipa` | Capacitor shell; a simulator build always runs, an IPA is archived and attached to the release when the Apple signing secrets are set |
+| watchOS | Simulator build only | SwiftUI app in `watchos/`, project generated with XcodeGen; no artifact is uploaded |
+| Garmin Connect IQ | `.prg` per device | Monkey C app in `garmin/`; the job runs but skips its build steps unless `CIQ_SDK_URL` is configured, and the `.prg` files are attached to the release only when `GARMIN_DEV_KEY_B64` is also set |
 
 All signing credentials are optional GitHub Actions secrets — the workflow header in
 `.github/workflows/build-mobile.yml` documents each one.
