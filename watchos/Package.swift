@@ -7,7 +7,7 @@ import PackageDescription
 
 let package = Package(
     name: "WorkoutWatch",
-    platforms: [.macOS(.v13), .watchOS(.v9)],
+    platforms: [.watchOS(.v9)],
     targets: [
         .target(
             name: "WorkoutWatch",
