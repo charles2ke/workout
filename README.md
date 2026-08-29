@@ -4,7 +4,7 @@
 [![Mobile Build](https://github.com/charles2ke/workout/actions/workflows/build-mobile.yml/badge.svg?branch=main)](https://github.com/charles2ke/workout/actions/workflows/build-mobile.yml)
 [![GitHub Pages](https://img.shields.io/website?label=GitHub%20Pages&url=https%3A%2F%2Fcharles2ke.github.io%2Fworkout%2F)](https://charles2ke.github.io/workout/)
 
-A lightweight, browser-only weekly workout planner. No frameworks, no build step — just HTML, CSS, and vanilla JavaScript served as a static site via GitHub Pages.
+A lightweight, dependency-free weekly workout planner. No frameworks, no bundler — just HTML, CSS, and vanilla JavaScript served as a static site via GitHub Pages, and packaged for Android, iOS/iPadOS, and watchOS on every release, with Garmin watches included when `CIQ_SDK_URL` is configured.
 
 ## Live Site
 
@@ -53,8 +53,22 @@ A lightweight, browser-only weekly workout planner. No frameworks, no build step
 | UI | Vanilla HTML / CSS / JavaScript (ES2020) |
 | Unit tests | [Jest](https://jestjs.io/) + jsdom |
 | E2E tests | [Playwright](https://playwright.dev/) (Chromium) |
+| Native shells | [Capacitor 7](https://capacitorjs.com/) (Android, iOS/iPadOS), SwiftUI (watchOS), Monkey C (Garmin Connect IQ) |
 | Hosting | GitHub Pages |
 | CI/CD | GitHub Actions |
+
+## Project Structure
+
+```
+index.html         redirect to workout.html
+workout.html, workout.js  7-day training program
+fitness.html, fitness.js  health dashboard
+scripts/           build-dist.mjs, Android/iOS build helpers
+tests/e2e/         Playwright specs
+garmin/            Connect IQ app (Monkey C)
+watchos/           watchOS companion app (SwiftUI + XcodeGen)
+.github/workflows/ CI, release and mobile build pipelines
+```
 
 ## Getting Started
 
@@ -110,13 +124,33 @@ Playwright screenshots are saved to `playwright-screenshots/` and uploaded as a 
 
 ## CI / CD
 
-Every push or pull request to `main` triggers the following GitHub Actions jobs:
+Every push or pull request to `main` runs `.github/workflows/deploy.yml`:
 
 1. **HTML Lint** — runs `htmlhint` against all HTML files
-2. **Jest Unit Tests** — runs the full test suite with coverage
-3. **Playwright E2E Tests** — runs browser tests and uploads screenshots as an artifact; a bot comment on each PR links directly to the artifact
-4. **Deploy to GitHub Pages** — deploys on merge to `main` (after lint + unit tests pass)
-5. **Update README** — prepares the latest *Live Site* URL and *Last Deployed* timestamp after each successful deployment, uploads the patched README as an artifact, and attempts to open a documentation PR when repository rules allow it
+2. **Unit & E2E Tests** — Jest with coverage, then Playwright, uploading the screenshots and HTML report as artifacts
+3. **Post Playwright screenshots** — comments on the pull request with a link to the screenshot artifact
+4. **Deploy to GitHub Pages** — deploys on push to `main` (after lint + tests pass)
+5. **Package Site** — runs `npm run build` and uploads `dist/` as the `workout-site` artifact
+
+Two other workflows complete the pipeline:
+
+- **Auto-create Pull Request** (`auto-pr.yml`) — opens a draft PR for any pushed branch that doesn't already have one
+- **Release** (`release.yml`) — on a `v*` tag, re-runs the tests, builds the site zip and publishes a GitHub Release
+
+## Native Apps
+
+Publishing a GitHub Release triggers `build-mobile.yml`, which packages the same `dist/` output for
+Android, iOS/iPadOS, and watchOS, and for Garmin watches when `CIQ_SDK_URL` is configured:
+
+| Platform | Output | Notes |
+|---|---|---|
+| Android / Android Auto | `.apk` + `.aab` | Capacitor shell; an unsigned debug APK is always produced, a signed APK/AAB when the Android signing secrets are set |
+| iOS / iPadOS | `.ipa` | Capacitor shell; a simulator build always runs, an IPA is archived when the Apple signing secrets are set |
+| watchOS | Simulator build | SwiftUI app in `watchos/`, project generated with XcodeGen |
+| Garmin Connect IQ | `.prg` per device | Monkey C app in `garmin/`; the whole job is skipped unless `CIQ_SDK_URL` is configured |
+
+All signing credentials are optional GitHub Actions secrets — the workflow header in
+`.github/workflows/build-mobile.yml` documents each one.
 
 ## License
 
