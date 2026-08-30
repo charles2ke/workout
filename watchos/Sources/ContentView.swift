@@ -142,7 +142,7 @@ struct DayDetailView: View {
                     .foregroundStyle(.secondary)
                 Text("\(day.estimatedMinutes) min")
                     .font(.caption2)
-                    .foregroundStyle(.accent)
+                    .foregroundStyle(Color.accentColor)
                 Divider()
                 ForEach(day.exercises) { exercise in
                     VStack(alignment: .leading, spacing: 4) {
@@ -151,7 +151,7 @@ struct DayDetailView: View {
                             .fontWeight(.semibold)
                         Text(exercise.stats)
                             .font(.caption2)
-                            .foregroundStyle(.accent)
+                            .foregroundStyle(Color.accentColor)
                         Text(exercise.notes)
                             .font(.caption2)
                             .foregroundStyle(.secondary)
