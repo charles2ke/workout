@@ -51,11 +51,14 @@ jobs:
           node-version: "20"
           cache: "npm"
 
-      - name: Set up JDK 17
+      # Capacitor 7's Android library is compiled with source/target
+      # compatibility 21, so anything older fails with
+      # "error: invalid source release: 21".
+      - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: "21"
 
       - name: Install dependencies
         run: npm ci

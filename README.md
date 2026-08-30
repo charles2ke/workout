@@ -1,7 +1,7 @@
 # 7-Day Longevity & Strength Program
 
 [![CI/CD Status](https://github.com/charles2ke/workout/actions/workflows/deploy.yml/badge.svg?branch=main)](https://github.com/charles2ke/workout/actions/workflows/deploy.yml)
-[![Mobile Build](https://github.com/charles2ke/workout/actions/workflows/build-mobile.yml/badge.svg?branch=main)](https://github.com/charles2ke/workout/actions/workflows/build-mobile.yml)
+[![Mobile Build](https://github.com/charles2ke/workout/actions/workflows/build-mobile.yml/badge.svg?event=release)](https://github.com/charles2ke/workout/actions/workflows/build-mobile.yml)
 [![GitHub Pages](https://img.shields.io/website?label=GitHub%20Pages&url=https%3A%2F%2Fcharles2ke.github.io%2Fworkout%2F)](https://charles2ke.github.io/workout/)
 
 A lightweight, dependency-free weekly workout planner. No frameworks, no bundler — just HTML, CSS, and vanilla JavaScript served as a static site via GitHub Pages, and packaged for Android, iOS/iPadOS, and watchOS on every release, with Garmin watches included when `CIQ_SDK_URL` is configured.
