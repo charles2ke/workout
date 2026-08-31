@@ -85,6 +85,21 @@ test.describe("Workout App", () => {
     await page.screenshot({ path: "playwright-screenshots/11-copy-feedback.png" });
   });
 
+  test("exercise illustrations animate and can be toggled off", async ({ page }) => {
+    const animated = page.locator(".day-section.active .svg-container svg [class^='anim-']").first();
+    await expect(animated).toBeAttached();
+
+    const runningName = await animated.evaluate((el) => getComputedStyle(el).animationName);
+    expect(runningName).not.toBe("none");
+    await page.screenshot({ path: "playwright-screenshots/13-exercise-animation.png", fullPage: true });
+
+    await page.locator("#toggle-animation").uncheck();
+    await expect(page.locator("#workout-content")).toHaveClass(/no-animation/);
+    const stoppedName = await animated.evaluate((el) => getComputedStyle(el).animationName);
+    expect(stoppedName).toBe("none");
+    await page.screenshot({ path: "playwright-screenshots/14-animation-off.png", fullPage: true });
+  });
+
   test("full page final state screenshot", async ({ page }) => {
     // Navigate to Saturday for a different view
     await page.locator("#tab-sat").click();

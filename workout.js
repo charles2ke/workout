@@ -207,42 +207,42 @@ function createSvg(illustration, titleText) {
     case "press":
       add("rect", { x: 15, y: 42, width: 70, height: 4, fill: "#475569" });
       add("circle", { cx: 25, cy: 35, r: 5, fill: "#38bdf8" });
-      add("line", { x1: 28, y1: 37, x2: 65, y2: 37, stroke: "#38bdf8", "stroke-width": 4 });
-      add("line", { x1: 45, y1: 15, x2: 45, y2: 35, stroke: "#cbd5e1", "stroke-width": 3 });
+      add("line", { x1: 28, y1: 37, x2: 65, y2: 37, stroke: "#38bdf8", "stroke-width": 4, class: "anim-press" });
+      add("line", { x1: 45, y1: 15, x2: 45, y2: 35, stroke: "#cbd5e1", "stroke-width": 3, class: "anim-press" });
       break;
     case "pull":
       add("line", { x1: 20, y1: 10, x2: 80, y2: 10, stroke: "#cbd5e1", "stroke-width": 3 });
-      add("circle", { cx: 50, cy: 28, r: 5, fill: "#38bdf8" });
-      add("line", { x1: 50, y1: 33, x2: 50, y2: 52, stroke: "#38bdf8", "stroke-width": 4 });
-      add("path", { d: "M 50 35 L 30 20 M 50 35 L 70 20", stroke: "#38bdf8", "stroke-width": 3, fill: "none" });
+      add("circle", { cx: 50, cy: 28, r: 5, fill: "#38bdf8", class: "anim-pull" });
+      add("line", { x1: 50, y1: 33, x2: 50, y2: 52, stroke: "#38bdf8", "stroke-width": 4, class: "anim-pull" });
+      add("path", { d: "M 50 35 L 30 20 M 50 35 L 70 20", stroke: "#38bdf8", "stroke-width": 3, fill: "none", class: "anim-pull" });
       break;
     case "squat":
-      add("circle", { cx: 40, cy: 20, r: 5, fill: "#38bdf8" });
-      add("path", { d: "M 40 25 L 40 38 L 25 45 L 25 58", stroke: "#38bdf8", "stroke-width": 4, fill: "none" });
-      add("circle", { cx: 48, cy: 28, r: 4, fill: "#cbd5e1" });
+      add("circle", { cx: 40, cy: 20, r: 5, fill: "#38bdf8", class: "anim-squat" });
+      add("path", { d: "M 40 25 L 40 38 L 25 45 L 25 58", stroke: "#38bdf8", "stroke-width": 4, fill: "none", class: "anim-squat" });
+      add("circle", { cx: 48, cy: 28, r: 4, fill: "#cbd5e1", class: "anim-squat" });
       break;
     case "cardio":
       add("path", { d: "M 10 30 Q 30 10 50 30 T 90 30", fill: "none", stroke: "#38bdf8", "stroke-width": 3 });
-      add("circle", { cx: 50, cy: 30, r: 4, fill: "#f8fafc" });
+      add("circle", { cx: 50, cy: 30, r: 4, fill: "#f8fafc", class: "anim-run" });
       break;
     case "row":
       add("rect", { x: 20, y: 38, width: 45, height: 4, fill: "#475569" });
       add("circle", { cx: 30, cy: 20, r: 5, fill: "#38bdf8" });
-      add("path", { d: "M 45 28 L 45 42", stroke: "#38bdf8", "stroke-width": 3 });
+      add("path", { d: "M 45 28 L 45 42", stroke: "#38bdf8", "stroke-width": 3, class: "anim-row" });
       break;
     case "split":
       add("rect", { x: 70, y: 38, width: 20, height: 4, fill: "#475569" });
-      add("circle", { cx: 42, cy: 18, r: 5, fill: "#38bdf8" });
-      add("path", { d: "M 42 23 L 42 40 L 35 58", stroke: "#38bdf8", "stroke-width": 4, fill: "none" });
+      add("circle", { cx: 42, cy: 18, r: 5, fill: "#38bdf8", class: "anim-squat" });
+      add("path", { d: "M 42 23 L 42 40 L 35 58", stroke: "#38bdf8", "stroke-width": 4, fill: "none", class: "anim-squat" });
       break;
     case "swing":
       add("circle", { cx: 50, cy: 18, r: 5, fill: "#38bdf8" });
       add("path", { d: "M 40 48 Q 55 48 70 28", stroke: "#f8fafc", "stroke-width": 2, "stroke-dasharray": "2,2", fill: "none" });
-      add("circle", { cx: 70, cy: 28, r: 4, fill: "#38bdf8" });
+      add("circle", { cx: 70, cy: 28, r: 4, fill: "#38bdf8", class: "anim-swing" });
       break;
     case "recovery":
-      add("rect", { x: 25, y: 38, width: 50, height: 12, rx: 6, fill: "#475569" });
-      add("circle", { cx: 50, cy: 28, r: 5, fill: "#38bdf8" });
+      add("rect", { x: 25, y: 38, width: 50, height: 12, rx: 6, fill: "#475569", class: "anim-roll" });
+      add("circle", { cx: 50, cy: 28, r: 5, fill: "#38bdf8", class: "anim-pulse" });
       break;
     default:
       add("rect", { x: 10, y: 12, width: 80, height: 36, rx: 6, fill: "#334155" });
@@ -258,6 +258,7 @@ const tabsNav = document.getElementById("day-tabs");
 const workoutContent = document.getElementById("workout-content");
 const notesToggle = document.getElementById("toggle-notes");
 const difficultyToggle = document.getElementById("toggle-difficulty");
+const animationToggle = document.getElementById("toggle-animation");
 const nameInput = document.getElementById("name-input");
 const ageInput = document.getElementById("age-input");
 const ethnicityInput = document.getElementById("ethnicity-input");
@@ -472,9 +473,11 @@ workoutContent.addEventListener("click", async (event) => {
 function applyVisibilityPreferences() {
   workoutContent.classList.toggle("hidden-notes", !notesToggle.checked);
   workoutContent.classList.toggle("hidden-difficulty", !difficultyToggle.checked);
+  workoutContent.classList.toggle("no-animation", !animationToggle.checked);
   storage.set("prefs", {
     showNotes: notesToggle.checked,
-    showDifficulty: difficultyToggle.checked
+    showDifficulty: difficultyToggle.checked,
+    animate: animationToggle.checked
   });
 }
 
@@ -495,6 +498,7 @@ heightInput.addEventListener("input", applyProfilePreferences);
 weightInput.addEventListener("input", applyProfilePreferences);
 notesToggle.addEventListener("change", applyVisibilityPreferences);
 difficultyToggle.addEventListener("change", applyVisibilityPreferences);
+animationToggle.addEventListener("change", applyVisibilityPreferences);
 
 const PROFILE_DEFAULTS = { name: "Tito", age: "42", ethnicity: "Indian", height: "5'11\"", weight: "77" };
 
@@ -590,9 +594,10 @@ function initWorkoutProgram() {
   renderTabs(WORKOUT_DATA);
   renderDays(WORKOUT_DATA);
 
-  const savedPrefs = storage.get("prefs", { showNotes: true, showDifficulty: true });
+  const savedPrefs = storage.get("prefs", { showNotes: true, showDifficulty: true, animate: true });
   notesToggle.checked = Boolean(savedPrefs.showNotes);
   difficultyToggle.checked = Boolean(savedPrefs.showDifficulty);
+  animationToggle.checked = savedPrefs.animate !== false;
   applyVisibilityPreferences();
 
   const savedProfile = storage.get("profile", {

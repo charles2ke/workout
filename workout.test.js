@@ -160,6 +160,11 @@ describe("workout.js", () => {
       expect(svg.children.length).toBeGreaterThan(1);
     });
 
+    test.each(known)("type '%s' includes animated parts", (type) => {
+      const svg = createSvg(type, `${type} label`);
+      expect(svg.querySelectorAll('[class^="anim-"]').length).toBeGreaterThan(0);
+    });
+
     test("unknown type renders default placeholder", () => {
       const svg = createSvg("__unknown__", "title");
       expect(svg.querySelector("rect")).not.toBeNull();
@@ -446,6 +451,30 @@ describe("workout.js", () => {
       const saved = JSON.parse(localStorage.getItem("prefs"));
       expect(saved.showNotes).toBe(false);
       expect(saved.showDifficulty).toBe(true);
+      expect(saved.animate).toBe(true);
+    });
+
+    test("unchecking animation adds no-animation class and persists", () => {
+      const t = document.getElementById("toggle-animation");
+      t.checked = false;
+      dispatchChange(t);
+      expect(document.getElementById("workout-content").classList.contains("no-animation")).toBe(true);
+      expect(JSON.parse(localStorage.getItem("prefs")).animate).toBe(false);
+    });
+
+    test("re-checking animation removes no-animation class", () => {
+      const t = document.getElementById("toggle-animation");
+      t.checked = false;
+      dispatchChange(t);
+      t.checked = true;
+      dispatchChange(t);
+      expect(document.getElementById("workout-content").classList.contains("no-animation")).toBe(false);
+    });
+
+    test("animation preference is restored from localStorage", () => {
+      resetAndLoad({ storageData: { prefs: { showNotes: true, showDifficulty: true, animate: false } } });
+      expect(document.getElementById("toggle-animation").checked).toBe(false);
+      expect(document.getElementById("workout-content").classList.contains("no-animation")).toBe(true);
     });
   });
 
