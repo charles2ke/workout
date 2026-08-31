@@ -28,10 +28,10 @@ A lightweight, dependency-free weekly workout planner. No frameworks, no bundler
 ### Workout program
 
 - **7-day program** — structured daily workouts covering upper body push/pull, lower body, active recovery, hypertrophy, posterior chain, full-body conditioning, and rest
-- **Exercise cards** — each card shows sets/reps, difficulty, coaching notes, and an inline SVG illustration
+- **Exercise cards** — each card shows sets/reps, difficulty, coaching notes, and an animated inline SVG illustration of the movement
 - **Rest timer** — configurable countdown timer with an audio notification tone when rest is complete
 - **Editable profile** — inline fields for name, age, ethnicity, height, and weight, persisted in `localStorage`
-- **Display toggles** — show/hide exercise notes and difficulty labels
+- **Display toggles** — show/hide exercise notes and difficulty labels, and turn exercise animations on/off (animations are also disabled automatically when the system prefers reduced motion)
 - **Copy to clipboard** — one-click copy of exercise details for sharing
 - **Keyboard navigation** — full arrow-key support on the day tabs (ARIA tablist pattern)
 - **Accessibility** — skip link, ARIA roles, live regions, and focus-visible styles throughout

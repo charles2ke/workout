@@ -298,6 +298,74 @@
 
     .svg-container svg { width: 100%; height: 100%; }
 
+    /* ===== Exercise Animations ===== */
+    .svg-container svg [class*="anim-"] {
+      transform-box: view-box;
+      transform-origin: center;
+      animation-duration: 2s;
+      animation-iteration-count: infinite;
+      animation-timing-function: ease-in-out;
+    }
+
+    .anim-press { animation-name: press-move; }
+    .anim-pull { animation-name: pull-move; }
+    .anim-squat { animation-name: squat-move; }
+    .anim-run { animation-name: run-move; }
+    .anim-row { animation-name: row-move; }
+    .anim-swing {
+      animation-name: swing-move;
+      transform-origin: 50px 48px;
+    }
+    .anim-roll { animation-name: roll-move; }
+    .anim-pulse { animation-name: pulse-move; }
+
+    @keyframes press-move {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-9px); }
+    }
+
+    @keyframes pull-move {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+
+    @keyframes squat-move {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(6px); }
+    }
+
+    @keyframes run-move {
+      0%, 100% { transform: translateX(-38px); }
+      50% { transform: translateX(38px); }
+    }
+
+    @keyframes row-move {
+      0%, 100% { transform: translateX(0); }
+      50% { transform: translateX(-10px); }
+    }
+
+    @keyframes swing-move {
+      0%, 100% { transform: rotate(-38deg); }
+      50% { transform: rotate(24deg); }
+    }
+
+    @keyframes roll-move {
+      0%, 100% { transform: translateX(-8px); }
+      50% { transform: translateX(8px); }
+    }
+
+    @keyframes pulse-move {
+      0%, 100% { transform: scale(1); opacity: 0.85; }
+      50% { transform: scale(1.25); opacity: 1; }
+    }
+
+    /* Animations off: display toggle, reduced-motion preference, or print. */
+    .no-animation .svg-container svg [class*="anim-"] { animation: none; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .svg-container svg [class*="anim-"] { animation: none; }
+    }
+
     .exercise-info { padding: 14px; }
     .exercise-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 6px; }
     .exercise-stats { font-size: 0.9rem; color: var(--accent); font-weight: 700; margin-bottom: 8px; }
@@ -398,6 +466,10 @@
       .svg-container {
         background: #fff;
       }
+
+      .svg-container svg [class*="anim-"] {
+        animation: none;
+      }
     }
   </style>
 </head>
@@ -449,6 +521,7 @@
         <div class="toggle-group">
           <label><input type="checkbox" id="toggle-notes" checked aria-label="Show exercise notes"> Show notes</label>
           <label><input type="checkbox" id="toggle-difficulty" checked aria-label="Show exercise difficulty"> Show difficulty</label>
+          <label><input type="checkbox" id="toggle-animation" checked aria-label="Animate exercise illustrations"> Animate exercises</label>
         </div>
       </article>
 
