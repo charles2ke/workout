@@ -356,7 +356,9 @@ async function startAuth(providerId) {
   const redirectUri = currentRedirectUri();
   const codeChallenge = await createCodeChallenge(verifier);
 
-  storage.set(PENDING_AUTH_KEY, { providerId, verifier, state, redirectUri });
+  if (!storage.set(PENDING_AUTH_KEY, { providerId, verifier, state, redirectUri })) {
+    throw new Error("failed to save OAuth state in local storage.");
+  }
   navigation.go(buildAuthUrl(providerId, { codeChallenge, state, redirectUri }));
 }
 
