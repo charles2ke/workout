@@ -205,8 +205,8 @@ function round(value, decimals = 0) {
 
 // ===== Live API connections (OAuth 2.0 + PKCE) =====
 // Both providers are contacted straight from the browser: no server, no secrets
-// in the repository. The OAuth client ID (and, when a provider's endpoints are
-// not CORS-enabled, a proxy base URL) is supplied by the user and kept in
+// in the repository. OAuth credentials (and, when a provider's endpoints are
+// not CORS-enabled, a proxy base URL) are supplied by the user and kept in
 // localStorage alongside the tokens.
 const API_DEFAULTS = {
   google: {
@@ -229,7 +229,7 @@ const API_DEFAULTS = {
   }
 };
 
-const API_OVERRIDE_FIELDS = ["clientId", "tokenUrl", "apiBase"];
+const API_OVERRIDE_FIELDS = ["clientId", "clientSecret", "tokenUrl", "apiBase"];
 const DAY_MS = 86400000;
 const SYNC_DAYS = 7;
 
@@ -262,6 +262,7 @@ function providerConfig(providerId) {
   return {
     ...defaults,
     clientId: overrides.clientId,
+    clientSecret: providerId === "garmin" ? overrides.clientSecret : "",
     tokenUrl: overrides.tokenUrl || defaults.tokenUrl,
     apiBase: overrides.apiBase || defaults.apiBase
   };
@@ -376,10 +377,17 @@ async function readJson(response) {
 
 async function requestTokens(providerId, params) {
   const config = providerConfig(providerId);
+  const headers = { "Content-Type": "application/x-www-form-urlencoded" };
+  const useBasicAuth = providerId === "garmin" && config.clientSecret;
+  if (useBasicAuth) {
+    const credentials = new TextEncoder().encode(`${config.clientId}:${config.clientSecret}`);
+    headers.Authorization = `Basic ${btoa(String.fromCharCode(...credentials))}`;
+  }
+
   const response = await fetch(config.tokenUrl, {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ client_id: config.clientId, ...params }).toString()
+    headers,
+    body: new URLSearchParams({ ...(useBasicAuth ? {} : { client_id: config.clientId }), ...params }).toString()
   });
 
   const payload = await readJson(response);
@@ -676,6 +684,7 @@ function providerElements(providerId) {
     connect: document.getElementById(`${providerId}-connect`),
     sync: document.getElementById(`${providerId}-sync`),
     clientId: document.getElementById(`${providerId}-client-id`),
+    clientSecret: document.getElementById(`${providerId}-client-secret`),
     tokenUrl: document.getElementById(`${providerId}-token-url`),
     apiBase: document.getElementById(`${providerId}-api-base`)
   };
@@ -814,6 +823,7 @@ function showPending(providerId, message) {
 function renderSettings(providerId) {
   const controls = elements[providerId];
   for (const field of API_OVERRIDE_FIELDS) {
+    if (!controls[field]) continue;
     controls[field].value = apiSettings[providerId][field];
   }
 }
@@ -900,6 +910,7 @@ function wireProvider(providerId) {
   controls.sync.addEventListener("click", () => handleSync(providerId));
 
   for (const field of API_OVERRIDE_FIELDS) {
+    if (!controls[field]) continue;
     controls[field].addEventListener("change", (event) => saveApiSetting(providerId, field, event.target.value));
   }
 }
