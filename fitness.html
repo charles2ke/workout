@@ -177,6 +177,45 @@
       opacity: 0;
     }
 
+    /* ===== API settings ===== */
+    .api-settings {
+      margin-top: 12px;
+      border-top: 1px solid var(--border-color);
+      padding-top: 10px;
+    }
+
+    .api-settings summary {
+      cursor: pointer;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .api-settings label {
+      display: block;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 8px;
+      margin-bottom: 4px;
+    }
+
+    .api-settings input {
+      width: 100%;
+      padding: 8px 10px;
+      min-height: 40px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-color);
+      color: var(--text-main);
+      font-size: 0.85rem;
+    }
+
+    .api-hint {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 8px;
+    }
+
     /* ===== Summary ===== */
     .summary-grid {
       display: grid;
@@ -283,28 +322,52 @@
       <section class="sources-grid" aria-label="Health data sources">
         <article class="source-card">
           <h2>Google Health</h2>
-          <p class="source-desc">Pull steps, sleep, resting heart rate, and calories from a Google Health Connect / Google Fit export (JSON or CSV).</p>
+          <p class="source-desc">Connect the Google Fit / Health Connect API to sync steps, sleep, resting heart rate, and calories &mdash; or import an export file (JSON or CSV).</p>
           <p class="source-status" id="google-status" role="status">Not connected.</p>
           <div class="source-actions">
-            <label class="file-label button" for="google-file">Import Google export
+            <button type="button" class="button" id="google-connect">Connect API</button>
+            <button type="button" class="button secondary" id="google-sync">Sync now</button>
+            <label class="file-label button" for="google-file">Import export
               <input type="file" id="google-file" accept=".json,.csv,application/json,text/csv" aria-label="Import Google Health export file">
             </label>
             <button type="button" class="button secondary" id="google-sample">Load sample</button>
             <button type="button" class="button danger" id="google-disconnect">Disconnect</button>
           </div>
+          <details class="api-settings">
+            <summary>API settings</summary>
+            <label for="google-client-id">OAuth client ID</label>
+            <input type="text" id="google-client-id" autocomplete="off" spellcheck="false" placeholder="your-client-id">
+            <label for="google-token-url">Token endpoint (optional override)</label>
+            <input type="url" id="google-token-url" autocomplete="off" spellcheck="false" placeholder="https://…">
+            <label for="google-api-base">API base URL (optional override)</label>
+            <input type="url" id="google-api-base" autocomplete="off" spellcheck="false" placeholder="https://…">
+            <p class="api-hint">Uses OAuth 2.0 with PKCE against the Google Fit REST API. Register this page&rsquo;s URL as the redirect URI in the <a href="https://console.cloud.google.com/apis/credentials">Google Cloud console</a>. Settings and tokens stay in this browser; use the overrides to point at your own CORS-enabled proxy if a provider blocks direct browser calls.</p>
+          </details>
         </article>
 
         <article class="source-card">
           <h2>Garmin</h2>
-          <p class="source-desc">Pull daily summaries from a Garmin Connect export (JSON or CSV), including VO2 max and body battery when present.</p>
+          <p class="source-desc">Connect the Garmin Health API to sync daily summaries, sleep, and VO2 max &mdash; or import a Garmin Connect export (JSON or CSV).</p>
           <p class="source-status" id="garmin-status" role="status">Not connected.</p>
           <div class="source-actions">
-            <label class="file-label button" for="garmin-file">Import Garmin export
-              <input type="file" id="garmin-file" accept=".json,.csv,application/json,text/csv" aria-label="Import Garmin Connect export file">
+            <button type="button" class="button" id="garmin-connect">Connect API</button>
+            <button type="button" class="button secondary" id="garmin-sync">Sync now</button>
+            <label class="file-label button" for="garmin-file">Import export
+              <input type="file" id="garmin-file" accept=".json,.csv,application/json,text/csv" aria-label="Import Garmin export file">
             </label>
             <button type="button" class="button secondary" id="garmin-sample">Load sample</button>
             <button type="button" class="button danger" id="garmin-disconnect">Disconnect</button>
           </div>
+          <details class="api-settings">
+            <summary>API settings</summary>
+            <label for="garmin-client-id">OAuth client ID</label>
+            <input type="text" id="garmin-client-id" autocomplete="off" spellcheck="false" placeholder="your-client-id">
+            <label for="garmin-token-url">Token endpoint (optional override)</label>
+            <input type="url" id="garmin-token-url" autocomplete="off" spellcheck="false" placeholder="https://…">
+            <label for="garmin-api-base">API base URL (optional override)</label>
+            <input type="url" id="garmin-api-base" autocomplete="off" spellcheck="false" placeholder="https://…">
+            <p class="api-hint">Uses OAuth 2.0 with PKCE against the Garmin Health Wellness API. Register this page&rsquo;s URL as the redirect URI in the <a href="https://developer.garmin.com/gc-developer-program/health-api/">Garmin developer portal</a>. Settings and tokens stay in this browser; use the overrides to point at your own CORS-enabled proxy if a provider blocks direct browser calls.</p>
+          </details>
         </article>
       </section>
 
@@ -335,7 +398,7 @@
     </main>
 
     <footer>
-      <p>Data is parsed in your browser and stored locally in <code>localStorage</code>. Nothing is uploaded anywhere.</p>
+      <p>Data is fetched or parsed in your browser and stored locally in <code>localStorage</code>. Nothing is sent anywhere except directly to Google and Garmin.</p>
     </footer>
   </div>
 

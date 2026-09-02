@@ -67,6 +67,25 @@ test.describe("My Fitness page", () => {
     await page.screenshot({ path: "playwright-screenshots/25-fitness-disconnected.png", fullPage: true });
   });
 
+  test("API connect requires a client ID and settings persist", async ({ page }) => {
+    await page.locator("#google-connect").click();
+    await expect(page.locator("#google-status")).toContainText("client ID");
+
+    await page.locator("article:has(#garmin-client-id) .api-settings summary").click();
+    await page.locator("#garmin-client-id").fill("demo-client-id");
+    await page.locator("#garmin-client-id").blur();
+    await page.reload();
+    await page.locator("article:has(#garmin-client-id) .api-settings summary").click();
+    await expect(page.locator("#garmin-client-id")).toHaveValue("demo-client-id");
+    await page.screenshot({ path: "playwright-screenshots/27-fitness-api-settings.png", fullPage: true });
+  });
+
+  test("sync now reports that the API is not connected", async ({ page }) => {
+    await page.locator("#google-sync").click();
+    await expect(page.locator("#google-status")).toContainText("Sync failed");
+    await page.screenshot({ path: "playwright-screenshots/28-fitness-sync-error.png", fullPage: true });
+  });
+
   test("navigation between workout and fitness pages works", async ({ page }) => {
     await page.locator('.page-nav a[href="workout.html"]').click();
     await expect(page.locator("h1")).toContainText("7-Day Longevity");
