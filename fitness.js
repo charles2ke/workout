@@ -522,18 +522,17 @@ const GARMIN_ENDPOINTS = ["dailies", "sleeps", "userMetrics"];
 async function fetchGarminRecords(accessToken, now = Date.now()) {
   const config = providerConfig("garmin");
   const endSeconds = Math.floor(now / 1000);
-  const requests = [];
+  const rows = [];
 
   for (const endpoint of GARMIN_ENDPOINTS) {
     for (let day = 0; day < SYNC_DAYS; day += 1) {
       const end = endSeconds - day * 86400;
       const url = `${config.apiBase}/wellness-api/rest/${endpoint}?uploadStartTimeInSeconds=${end - 86400}&uploadEndTimeInSeconds=${end}`;
-      requests.push(apiFetch(url, accessToken));
+      const payload = await apiFetch(url, accessToken);
+      rows.push(...(Array.isArray(payload) ? payload : extractRows(payload)));
     }
   }
 
-  const responses = await Promise.all(requests);
-  const rows = responses.flatMap((payload) => (Array.isArray(payload) ? payload : extractRows(payload)));
   return mergeByDate(rows.map(normalizeRecord).filter(Boolean));
 }
 

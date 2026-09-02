@@ -47,7 +47,7 @@ A lightweight, dependency-free weekly workout planner. No frameworks, no bundler
 - **Sample data** — one-click sample data per source to preview the dashboard
 - **Summary metrics** — days tracked, average steps, average resting heart rate, average sleep, total active calories, and latest VO2 max
 - **Daily records table** — merged, newest-first view of the 30 most recent days across both sources
-- **Local only** — there is no backend and no client secret in the repository: data is fetched or parsed in the browser, and tokens, settings and records live in `localStorage`. Requests go directly to Google and Garmin
+- **Local only** — there is no backend and no client secret in the repository: data is fetched or parsed in the browser, and tokens, settings and records live in `localStorage`. Requests use provider endpoints by default, or your configured token/API override endpoints
 
 ### Connecting a provider
 
