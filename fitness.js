@@ -2,7 +2,7 @@
 const FITNESS_STORAGE_KEY = "fitnessSources";
 const API_SETTINGS_KEY = "fitnessApiSettings";
 const AUTH_TOKENS_KEY = "fitnessAuthTokens";
-const PENDING_AUTH_KEY = "fitnessPendingAuth";
+const PENDING_AUTH_KEY_PREFIX = "fitnessPendingAuth:";
 
 const storage = {
   get(key, fallback) {
@@ -345,6 +345,10 @@ function buildAuthUrl(providerId, { codeChallenge, state, redirectUri }) {
   return url.toString();
 }
 
+function pendingAuthKey(providerId) {
+  return `${PENDING_AUTH_KEY_PREFIX}${providerId}`;
+}
+
 async function startAuth(providerId) {
   const config = providerConfig(providerId);
   if (!config.clientId) {
@@ -352,11 +356,11 @@ async function startAuth(providerId) {
   }
 
   const verifier = randomToken();
-  const state = randomToken(16);
+  const state = `${providerId}:${randomToken(16)}`;
   const redirectUri = currentRedirectUri();
   const codeChallenge = await createCodeChallenge(verifier);
 
-  if (!storage.set(PENDING_AUTH_KEY, { providerId, verifier, state, redirectUri })) {
+  if (!storage.set(pendingAuthKey(providerId), { providerId, verifier, state, redirectUri })) {
     throw new Error("failed to save OAuth state in local storage.");
   }
   navigation.go(buildAuthUrl(providerId, { codeChallenge, state, redirectUri }));
@@ -843,19 +847,21 @@ async function handleAuthRedirect() {
   const error = params.get("error");
   if (!code && !error) return false;
 
-  const pending = storage.get(PENDING_AUTH_KEY, null);
-  storage.remove(PENDING_AUTH_KEY);
+  const state = params.get("state");
+  const providerId = state && state.includes(":") ? state.slice(0, state.indexOf(":")) : null;
+  const pendingKey = providerId ? pendingAuthKey(providerId) : null;
+  const pending = pendingKey ? storage.get(pendingKey, null) : null;
+  if (pendingKey) storage.remove(pendingKey);
   clearAuthParamsFromUrl();
 
-  if (!pending || !PROVIDERS[pending.providerId]) return false;
-  const providerId = pending.providerId;
+  if (!pending || !PROVIDERS[providerId]) return false;
 
   if (error) {
     showError(providerId, `Connection failed: ${error}`);
     return false;
   }
 
-  if (params.get("state") !== pending.state) {
+  if (state !== pending.state) {
     showError(providerId, "Connection failed: the sign-in state did not match.");
     return false;
   }
@@ -951,7 +957,7 @@ if (typeof module !== "undefined") {
       FITNESS_STORAGE_KEY,
       API_SETTINGS_KEY,
       AUTH_TOKENS_KEY,
-      PENDING_AUTH_KEY
+      PENDING_AUTH_KEY_PREFIX
     }
   };
 }

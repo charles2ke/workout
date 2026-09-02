@@ -530,8 +530,9 @@ describe("fitness.js", () => {
 
         await api.startAuth("google");
 
-        const pending = JSON.parse(localStorage.getItem(api.PENDING_AUTH_KEY));
+        const pending = JSON.parse(localStorage.getItem(api.PENDING_AUTH_KEY_PREFIX + "google"));
         expect(pending.providerId).toBe("google");
+        expect(pending.state).toMatch(/^google:/);
         expect(pending.verifier).toEqual(expect.any(String));
         expect(go).toHaveBeenCalledWith(expect.stringContaining("code_challenge="));
         go.mockRestore();
@@ -753,7 +754,7 @@ describe("fitness.js", () => {
 
     describe("handleAuthRedirect", () => {
       function setPending(pending) {
-        localStorage.setItem(api.PENDING_AUTH_KEY, JSON.stringify(pending));
+        localStorage.setItem(api.PENDING_AUTH_KEY_PREFIX + pending.providerId, JSON.stringify(pending));
       }
 
       test("does nothing without OAuth parameters", async () => {
@@ -761,38 +762,44 @@ describe("fitness.js", () => {
       });
 
       test("ignores a redirect without stored state", async () => {
+        window.history.replaceState({}, "", "/fitness.html?code=abc&state=google:st");
+        await expect(api.handleAuthRedirect()).resolves.toBe(false);
+        expect(window.location.search).toBe("");
+      });
+
+      test("ignores a redirect with a malformed state", async () => {
         window.history.replaceState({}, "", "/fitness.html?code=abc&state=st");
         await expect(api.handleAuthRedirect()).resolves.toBe(false);
         expect(window.location.search).toBe("");
       });
 
       test("ignores a redirect for an unknown provider", async () => {
-        window.history.replaceState({}, "", "/fitness.html?code=abc&state=st");
-        setPending({ providerId: "fitbit", state: "st", verifier: "v", redirectUri: "https://app/" });
+        window.history.replaceState({}, "", "/fitness.html?code=abc&state=fitbit:st");
+        setPending({ providerId: "fitbit", state: "fitbit:st", verifier: "v", redirectUri: "https://app/" });
         await expect(api.handleAuthRedirect()).resolves.toBe(false);
       });
 
       test("reports a provider error", async () => {
-        window.history.replaceState({}, "", "/fitness.html?error=access_denied");
-        setPending({ providerId: "google", state: "st", verifier: "v", redirectUri: "https://app/" });
+        window.history.replaceState({}, "", "/fitness.html?error=access_denied&state=google:st");
+        setPending({ providerId: "google", state: "google:st", verifier: "v", redirectUri: "https://app/" });
 
         await expect(api.handleAuthRedirect()).resolves.toBe(false);
 
         expect(document.getElementById("google-status").textContent).toContain("access_denied");
-        expect(localStorage.getItem(api.PENDING_AUTH_KEY)).toBeNull();
+        expect(localStorage.getItem(api.PENDING_AUTH_KEY_PREFIX + "google")).toBeNull();
       });
 
       test("rejects a mismatched state", async () => {
-        window.history.replaceState({}, "", "/fitness.html?code=abc&state=other");
-        setPending({ providerId: "google", state: "st", verifier: "v", redirectUri: "https://app/" });
+        window.history.replaceState({}, "", "/fitness.html?code=abc&state=google:other");
+        setPending({ providerId: "google", state: "google:st", verifier: "v", redirectUri: "https://app/" });
 
         await expect(api.handleAuthRedirect()).resolves.toBe(false);
         expect(document.getElementById("google-status").textContent).toContain("state did not match");
       });
 
       test("exchanges the code, syncs and renders", async () => {
-        window.history.replaceState({}, "", "/fitness.html?code=abc&state=st");
-        setPending({ providerId: "google", state: "st", verifier: "v", redirectUri: "https://app/" });
+        window.history.replaceState({}, "", "/fitness.html?code=abc&state=google:st");
+        setPending({ providerId: "google", state: "google:st", verifier: "v", redirectUri: "https://app/" });
         global.fetch = jest
           .fn()
           .mockResolvedValueOnce(jsonResponse({ access_token: "at", refresh_token: "rt", expires_in: 3600 }))
@@ -805,8 +812,8 @@ describe("fitness.js", () => {
       });
 
       test("reports a failed exchange", async () => {
-        window.history.replaceState({}, "", "/fitness.html?code=abc&state=st");
-        setPending({ providerId: "garmin", state: "st", verifier: "v", redirectUri: "https://app/" });
+        window.history.replaceState({}, "", "/fitness.html?code=abc&state=garmin:st");
+        setPending({ providerId: "garmin", state: "garmin:st", verifier: "v", redirectUri: "https://app/" });
         global.fetch = jest.fn().mockResolvedValue(jsonResponse({ error_description: "nope" }, 400));
 
         await expect(api.handleAuthRedirect()).resolves.toBe(true);
@@ -871,7 +878,7 @@ describe("fitness.js", () => {
 
   describe("storage removal failures", () => {
     test("blocked removeItem is swallowed", async () => {
-      window.history.replaceState({}, "", "/fitness.html?error=access_denied");
+      window.history.replaceState({}, "", "/fitness.html?error=access_denied&state=google:st");
       const removeItem = jest.spyOn(Storage.prototype, "removeItem").mockImplementation(() => {
         throw new Error("blocked");
       });
