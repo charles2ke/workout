@@ -552,11 +552,13 @@ describe("fitness.js", () => {
           throw new Error("blocked");
         });
 
-        await expect(api.startAuth("google")).rejects.toThrow("failed to save OAuth state");
-        expect(go).not.toHaveBeenCalled();
-
-        setItem.mockRestore();
-        go.mockRestore();
+        try {
+          await expect(api.startAuth("google")).rejects.toThrow("failed to save OAuth state");
+          expect(go).not.toHaveBeenCalled();
+        } finally {
+          setItem.mockRestore();
+          go.mockRestore();
+        }
       });
     });
 
