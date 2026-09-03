@@ -453,9 +453,14 @@ workoutContent.addEventListener("click", async (event) => {
       fallbackInput.style.position = "fixed";
       fallbackInput.style.left = "-9999px";
       document.body.appendChild(fallbackInput);
-      fallbackInput.select();
-      document.execCommand("copy");
-      fallbackInput.remove();
+      try {
+        fallbackInput.select();
+        if (!document.execCommand("copy")) {
+          throw new Error("Copy failed.");
+        }
+      } finally {
+        fallbackInput.remove();
+      }
     }
 
     copyBtn.textContent = "Copied!";

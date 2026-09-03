@@ -155,6 +155,11 @@ describe("fitness.js", () => {
       expect(rows[1].Note).toBe("");
     });
 
+    test("handles quoted newlines", () => {
+      const rows = api.parseCsv('Date,Note\r\n2026-08-20,"line one\nline two"\r\n');
+      expect(rows).toEqual([{ Date: "2026-08-20", Note: "line one\nline two" }]);
+    });
+
     test("header only → empty", () => expect(api.parseCsv("Date,Steps")).toEqual([]));
   });
 

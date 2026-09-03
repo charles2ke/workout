@@ -112,42 +112,56 @@ function normalizeRecord(raw) {
   };
 }
 
-function splitCsvLine(line) {
-  const cells = [];
+function splitCsvRows(text) {
+  const rows = [];
+  let cells = [];
   let current = "";
   let quoted = false;
 
-  for (let index = 0; index < line.length; index += 1) {
-    const char = line[index];
-    if (char === '"') {
-      if (quoted && line[index + 1] === '"') {
+  const pushCell = () => {
+    cells.push(current.trim());
+    current = "";
+  };
+
+  const pushRow = () => {
+    pushCell();
+    if (cells.length > 1 || cells[0] !== "") rows.push(cells);
+    cells = [];
+  };
+
+  const normalized = String(text).replace(/\r\n?/g, "\n");
+  for (let index = 0; index < normalized.length; index += 1) {
+    const char = normalized[index];
+    if (quoted) {
+      if (char === '"' && normalized[index + 1] === '"') {
         current += '"';
         index += 1;
+      } else if (char === '"') {
+        quoted = false;
       } else {
-        quoted = !quoted;
+        current += char;
       }
-    } else if (char === "," && !quoted) {
-      cells.push(current.trim());
-      current = "";
+    } else if (char === '"') {
+      quoted = true;
+    } else if (char === ",") {
+      pushCell();
+    } else if (char === "\n") {
+      pushRow();
     } else {
       current += char;
     }
   }
 
-  cells.push(current.trim());
-  return cells;
+  pushRow();
+  return rows;
 }
 
 function parseCsv(text) {
-  const lines = String(text)
-    .split(/\r?\n/)
-    .filter((line) => line.trim() !== "");
+  const rows = splitCsvRows(text);
+  if (rows.length < 2) return [];
 
-  if (lines.length < 2) return [];
-
-  const headers = splitCsvLine(lines[0]);
-  return lines.slice(1).map((line) => {
-    const cells = splitCsvLine(line);
+  const headers = rows[0];
+  return rows.slice(1).map((cells) => {
     const row = {};
     headers.forEach((header, index) => {
       row[header] = cells[index] === undefined ? "" : cells[index];
