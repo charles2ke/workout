@@ -545,7 +545,7 @@ describe("fitness.js", () => {
         go.mockRestore();
       });
 
-      test("rejects and does not navigate when the pending state cannot be saved", async () => {
+      test("rejects when the PKCE state cannot be stored", async () => {
         api.saveApiSetting("google", "clientId", "gid");
         const go = jest.spyOn(api.navigation, "go").mockImplementation(() => {});
         const setItem = jest.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
@@ -553,8 +553,7 @@ describe("fitness.js", () => {
         });
 
         try {
-          await expect(api.startAuth("google")).rejects.toThrow("local storage");
-
+          await expect(api.startAuth("google")).rejects.toThrow("failed to save OAuth state");
           expect(go).not.toHaveBeenCalled();
         } finally {
           setItem.mockRestore();
