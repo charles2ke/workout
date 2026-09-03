@@ -21,7 +21,7 @@ A lightweight, dependency-free weekly workout planner. No frameworks, no bundler
 ## Pages
 
 - **Workout Program** (`workout.html`) — the 7-day training plan
-- **My Fitness** (`fitness.html`) — health dashboard that pulls in Google Health and Garmin data
+- **My Fitness** (`fitness.html`) — health dashboard that connects to the Google Health and Garmin APIs (or imports their export files)
 
 ## Features
 
@@ -39,12 +39,24 @@ A lightweight, dependency-free weekly workout planner. No frameworks, no bundler
 
 ### My Fitness
 
-- **Google Health source** — import a Google Health Connect / Google Fit export (JSON or CSV) to pull in steps, resting heart rate, sleep, and active calories
-- **Garmin source** — import a Garmin Connect export (JSON or CSV), including VO2 max when present
+- **Live API connections** — "Connect API" runs an OAuth 2.0 Authorization Code + PKCE flow straight from the browser and "Sync now" pulls the last 7 days from the provider:
+  - **Google Health** — the Google Fit REST API (`dataset:aggregate`) for steps, active calories, resting heart rate, and sleep
+  - **Garmin** — the Garmin Health Wellness API (`dailies`, `sleeps`, `userMetrics`) for daily summaries, sleep, and VO2 max
+- **API settings** — each source has an "API settings" panel for your OAuth client ID, Garmin also accepts an optional client secret for token authentication, and both sources include optional token endpoint and API base overrides so you can point at your own CORS-enabled proxy when a provider blocks direct browser calls
+- **File import** — a Google Health Connect / Google Fit or Garmin Connect export (JSON or CSV) can still be imported without any API setup
 - **Sample data** — one-click sample data per source to preview the dashboard
 - **Summary metrics** — days tracked, average steps, average resting heart rate, average sleep, total active calories, and latest VO2 max
 - **Daily records table** — merged, newest-first view of the 30 most recent days across both sources
-- **Local only** — files are parsed in the browser and connections persist in `localStorage`; no data leaves the device
+- **Local only** — there is no backend and no client secret in the repository: data is fetched or parsed in the browser, and tokens, settings and records live in `localStorage`. Requests use provider endpoints by default, or your configured token/API override endpoints
+
+### Connecting a provider
+
+1. Register an OAuth client with the provider ([Google Cloud console](https://console.cloud.google.com/apis/credentials) for the Fitness API, the [Garmin developer portal](https://developer.garmin.com/gc-developer-program/health-api/) for the Health API) and add the URL of `fitness.html` as an allowed redirect URI.
+2. Open **My Fitness → API settings** for that source and paste the OAuth client ID. For Garmin, also paste the client secret if Garmin requires client authentication for token requests.
+3. Click **Connect API**, approve the consent screen, and the dashboard syncs automatically on return.
+4. Click **Sync now** at any time to refresh; **Disconnect** clears the stored records and tokens.
+
+Tokens are refreshed automatically while a refresh token is available.
 
 ## Tech Stack
 

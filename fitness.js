@@ -1,5 +1,8 @@
 // ===== Storage =====
 const FITNESS_STORAGE_KEY = "fitnessSources";
+const API_SETTINGS_KEY = "fitnessApiSettings";
+const AUTH_TOKENS_KEY = "fitnessAuthTokens";
+const PENDING_AUTH_KEY_PREFIX = "fitnessPendingAuth:";
 
 const storage = {
   get(key, fallback) {
@@ -13,6 +16,14 @@ const storage = {
   set(key, value) {
     try {
       localStorage.setItem(key, JSON.stringify(value));
+      return true;
+    } catch {
+      return false;
+    }
+  },
+  remove(key) {
+    try {
+      localStorage.removeItem(key);
       return true;
     } catch {
       return false;
@@ -32,7 +43,7 @@ const FIELD_ALIASES = {
   restingHeartRate: ["restingheartrate", "restinghr", "resting_heart_rate", "restingheartrateinbeatsperminute"],
   sleepHours: ["sleephours", "sleep", "hoursofsleep"],
   sleepMinutes: ["sleepminutes", "totalsleepminutes"],
-  sleepSeconds: ["sleepseconds", "sleepdurationinseconds", "totalsleepseconds"],
+  sleepSeconds: ["sleepseconds", "sleepdurationinseconds", "totalsleepseconds", "sleeptimeinseconds"],
   activeCalories: ["activecalories", "activekilocalories", "activecaloriesburned", "calories", "caloriesburned"],
   vo2Max: ["vo2max", "vo2maxvalue", "vo2"]
 };
@@ -168,6 +179,384 @@ function sortRecords(records) {
   return [...records].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
 }
 
+function mergeByDate(records) {
+  const byDate = new Map();
+
+  for (const record of records) {
+    const existing = byDate.get(record.date);
+    if (!existing) {
+      byDate.set(record.date, { ...record });
+      continue;
+    }
+    for (const [key, value] of Object.entries(record)) {
+      if (key === "date" || value === null) continue;
+      if (existing[key] === null || existing[key] === undefined) existing[key] = value;
+    }
+  }
+
+  return sortRecords([...byDate.values()]);
+}
+
+function round(value, decimals = 0) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return null;
+  const factor = 10 ** decimals;
+  return Math.round(value * factor) / factor;
+}
+
+// ===== Live API connections (OAuth 2.0 + PKCE) =====
+// Both providers are contacted straight from the browser: no server, no secrets
+// in the repository. OAuth credentials (and, when a provider's endpoints are
+// not CORS-enabled, a proxy base URL) are supplied by the user and kept in
+// localStorage alongside the tokens.
+const API_DEFAULTS = {
+  google: {
+    authUrl: "https://accounts.google.com/o/oauth2/v2/auth",
+    tokenUrl: "https://oauth2.googleapis.com/token",
+    apiBase: "https://www.googleapis.com",
+    scope: [
+      "https://www.googleapis.com/auth/fitness.activity.read",
+      "https://www.googleapis.com/auth/fitness.heart_rate.read",
+      "https://www.googleapis.com/auth/fitness.sleep.read"
+    ].join(" "),
+    authParams: { access_type: "offline", prompt: "consent" }
+  },
+  garmin: {
+    authUrl: "https://connect.garmin.com/oauth2Confirm",
+    tokenUrl: "https://diauth.garmin.com/di-oauth2-service/oauth/token",
+    apiBase: "https://apis.garmin.com",
+    scope: "",
+    authParams: {}
+  }
+};
+
+const API_OVERRIDE_FIELDS = ["clientId", "clientSecret", "tokenUrl", "apiBase"];
+const DAY_MS = 86400000;
+const SYNC_DAYS = 7;
+
+function loadApiSettings() {
+  const saved = storage.get(API_SETTINGS_KEY, null);
+  const settings = {};
+
+  for (const providerId of Object.keys(API_DEFAULTS)) {
+    const savedProvider = saved && typeof saved === "object" ? saved[providerId] : null;
+    settings[providerId] = {};
+    for (const field of API_OVERRIDE_FIELDS) {
+      const value = savedProvider && typeof savedProvider === "object" ? savedProvider[field] : null;
+      settings[providerId][field] = typeof value === "string" ? value.trim() : "";
+    }
+  }
+
+  return settings;
+}
+
+let apiSettings = loadApiSettings();
+
+function saveApiSetting(providerId, field, value) {
+  apiSettings[providerId][field] = String(value || "").trim();
+  storage.set(API_SETTINGS_KEY, apiSettings);
+}
+
+function providerConfig(providerId) {
+  const defaults = API_DEFAULTS[providerId];
+  const overrides = apiSettings[providerId];
+  return {
+    ...defaults,
+    clientId: overrides.clientId,
+    clientSecret: providerId === "garmin" ? overrides.clientSecret : "",
+    tokenUrl: overrides.tokenUrl || defaults.tokenUrl,
+    apiBase: overrides.apiBase || defaults.apiBase
+  };
+}
+
+function loadTokens() {
+  const saved = storage.get(AUTH_TOKENS_KEY, null);
+  const tokens = {};
+
+  for (const providerId of Object.keys(API_DEFAULTS)) {
+    const savedProvider = saved && typeof saved === "object" ? saved[providerId] : null;
+    tokens[providerId] =
+      savedProvider && typeof savedProvider === "object" && savedProvider.accessToken
+        ? {
+            accessToken: String(savedProvider.accessToken),
+            refreshToken: savedProvider.refreshToken ? String(savedProvider.refreshToken) : null,
+            expiresAt: Number(savedProvider.expiresAt) || 0
+          }
+        : null;
+  }
+
+  return tokens;
+}
+
+let authTokens = loadTokens();
+
+function saveTokens(providerId, tokens) {
+  authTokens[providerId] = tokens;
+  storage.set(AUTH_TOKENS_KEY, authTokens);
+}
+
+function clearTokens(providerId) {
+  authTokens[providerId] = null;
+  storage.set(AUTH_TOKENS_KEY, authTokens);
+}
+
+// Navigation is wrapped so the redirect can be stubbed in tests.
+const navigation = {
+  /* istanbul ignore next -- real navigation is not exercised under jsdom */
+  go(url) {
+    window.location.assign(url);
+  }
+};
+
+function base64Url(bytes) {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function randomToken(size = 32) {
+  const bytes = new Uint8Array(size);
+  window.crypto.getRandomValues(bytes);
+  return base64Url(bytes);
+}
+
+async function createCodeChallenge(verifier) {
+  const digest = await window.crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier));
+  return base64Url(new Uint8Array(digest));
+}
+
+function currentRedirectUri() {
+  return `${window.location.origin}${window.location.pathname}`;
+}
+
+function buildAuthUrl(providerId, { codeChallenge, state, redirectUri }) {
+  const config = providerConfig(providerId);
+  const url = new URL(config.authUrl);
+  const params = {
+    client_id: config.clientId,
+    response_type: "code",
+    redirect_uri: redirectUri,
+    state,
+    code_challenge: codeChallenge,
+    code_challenge_method: "S256",
+    ...config.authParams
+  };
+
+  if (config.scope) params.scope = config.scope;
+  for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
+  return url.toString();
+}
+
+function pendingAuthKey(providerId) {
+  return `${PENDING_AUTH_KEY_PREFIX}${providerId}`;
+}
+
+async function startAuth(providerId) {
+  const config = providerConfig(providerId);
+  if (!config.clientId) {
+    throw new Error("add your OAuth client ID under API settings first.");
+  }
+
+  const verifier = randomToken();
+  const state = `${providerId}:${randomToken(16)}`;
+  const redirectUri = currentRedirectUri();
+  const codeChallenge = await createCodeChallenge(verifier);
+
+  if (!storage.set(pendingAuthKey(providerId), { providerId, verifier, state, redirectUri })) {
+    throw new Error("failed to save OAuth state in local storage.");
+  }
+  navigation.go(buildAuthUrl(providerId, { codeChallenge, state, redirectUri }));
+}
+
+async function readJson(response) {
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
+async function requestTokens(providerId, params) {
+  const config = providerConfig(providerId);
+  const headers = { "Content-Type": "application/x-www-form-urlencoded" };
+  const useBasicAuth = providerId === "garmin" && config.clientSecret;
+  if (useBasicAuth) {
+    const credentials = new TextEncoder().encode(`${config.clientId}:${config.clientSecret}`);
+    headers.Authorization = `Basic ${btoa(String.fromCharCode(...credentials))}`;
+  }
+
+  const response = await fetch(config.tokenUrl, {
+    method: "POST",
+    headers,
+    body: new URLSearchParams({ ...(useBasicAuth ? {} : { client_id: config.clientId }), ...params }).toString()
+  });
+
+  const payload = await readJson(response);
+  if (!response.ok || !payload || !payload.access_token) {
+    const detail = payload && payload.error_description ? payload.error_description : `HTTP ${response.status}`;
+    throw new Error(`the token request was rejected (${detail}).`);
+  }
+
+  const expiresIn = Number(payload.expires_in);
+  return {
+    accessToken: String(payload.access_token),
+    refreshToken: payload.refresh_token ? String(payload.refresh_token) : null,
+    expiresAt: Date.now() + (Number.isFinite(expiresIn) ? expiresIn : 3600) * 1000
+  };
+}
+
+function exchangeCode(providerId, code, verifier, redirectUri) {
+  return requestTokens(providerId, {
+    grant_type: "authorization_code",
+    code,
+    code_verifier: verifier,
+    redirect_uri: redirectUri
+  });
+}
+
+async function ensureAccessToken(providerId) {
+  const tokens = authTokens[providerId];
+  if (!tokens) throw new Error("connect the API first.");
+  if (tokens.expiresAt > Date.now() + 60000) return tokens.accessToken;
+  if (!tokens.refreshToken) throw new Error("the session expired — connect the API again.");
+
+  const refreshed = await requestTokens(providerId, {
+    grant_type: "refresh_token",
+    refresh_token: tokens.refreshToken
+  });
+  const merged = { ...refreshed, refreshToken: refreshed.refreshToken || tokens.refreshToken };
+  saveTokens(providerId, merged);
+  return merged.accessToken;
+}
+
+async function apiFetch(url, accessToken, options = {}) {
+  const response = await fetch(url, {
+    ...options,
+    headers: { ...(options.headers || {}), Authorization: "Bearer " + accessToken }
+  });
+
+  if (!response.ok) throw new Error(`the API responded with HTTP ${response.status}.`);
+  const payload = await readJson(response);
+  if (payload === null) throw new Error("the API response could not be read.");
+  return payload;
+}
+
+// ----- Google Fit -----
+const GOOGLE_AGGREGATE_TYPES = [
+  "com.google.step_count.delta",
+  "com.google.calories.expended",
+  "com.google.heart_rate.bpm",
+  "com.google.sleep.segment"
+];
+
+// Google sleep segment values: 1 = awake, 3 = out of bed.
+const GOOGLE_NON_SLEEP_STAGES = [1, 3];
+
+function datasetPoints(datasets, index) {
+  const dataset = Array.isArray(datasets) ? datasets[index] : null;
+  return dataset && Array.isArray(dataset.point) ? dataset.point : [];
+}
+
+function pointValue(point, index = 0) {
+  const value = Array.isArray(point.value) ? point.value[index] : null;
+  if (!value) return null;
+  if (typeof value.intVal === "number") return value.intVal;
+  if (typeof value.fpVal === "number") return value.fpVal;
+  return null;
+}
+
+function sumPointValues(points, index = 0) {
+  let total = null;
+  for (const point of points) {
+    const value = pointValue(point, index);
+    if (value === null) continue;
+    total = (total === null ? 0 : total) + value;
+  }
+  return total;
+}
+
+function sleepHoursFromPoints(points) {
+  let seconds = null;
+
+  for (const point of points) {
+    const stage = pointValue(point);
+    if (stage === null || GOOGLE_NON_SLEEP_STAGES.includes(stage)) continue;
+    const start = Number(point.startTimeNanos);
+    const end = Number(point.endTimeNanos);
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) continue;
+    seconds = (seconds === null ? 0 : seconds) + (end - start) / 1e9;
+  }
+
+  return seconds === null ? null : round(seconds / 3600, 1);
+}
+
+function googleBucketToRecord(bucket) {
+  const date = toDateKey(bucket.startTimeMillis);
+  if (!date) return null;
+
+  const datasets = bucket.dataset;
+  const heartPoints = datasetPoints(datasets, 2);
+  // Aggregated heart-rate points are [average, max, min]; the daily minimum is
+  // the closest stand-in Google Fit offers for resting heart rate.
+  const restingHeartRate = heartPoints.length === 0 ? null : pointValue(heartPoints[0], 2);
+
+  return {
+    date,
+    steps: round(sumPointValues(datasetPoints(datasets, 0))),
+    restingHeartRate: round(restingHeartRate),
+    sleepHours: sleepHoursFromPoints(datasetPoints(datasets, 3)),
+    activeCalories: round(sumPointValues(datasetPoints(datasets, 1))),
+    vo2Max: null
+  };
+}
+
+async function fetchGoogleRecords(accessToken, now = Date.now()) {
+  const config = providerConfig("google");
+  const payload = await apiFetch(`${config.apiBase}/fitness/v1/users/me/dataset:aggregate`, accessToken, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      aggregateBy: GOOGLE_AGGREGATE_TYPES.map((dataTypeName) => ({ dataTypeName })),
+      bucketByTime: { durationMillis: DAY_MS },
+      startTimeMillis: now - SYNC_DAYS * DAY_MS,
+      endTimeMillis: now
+    })
+  });
+
+  const buckets = Array.isArray(payload.bucket) ? payload.bucket : [];
+  return sortRecords(buckets.map(googleBucketToRecord).filter(Boolean));
+}
+
+// ----- Garmin Health API -----
+// Garmin's wellness summaries accept a 24-hour window per request, so one
+// request per endpoint per day is issued.
+const GARMIN_ENDPOINTS = ["dailies", "sleeps", "userMetrics"];
+
+async function fetchGarminRecords(accessToken, now = Date.now()) {
+  const config = providerConfig("garmin");
+  const endSeconds = Math.floor(now / 1000);
+  const rows = [];
+
+  for (const endpoint of GARMIN_ENDPOINTS) {
+    for (let day = 0; day < SYNC_DAYS; day += 1) {
+      const end = endSeconds - day * 86400;
+      const url = `${config.apiBase}/wellness-api/rest/${endpoint}?uploadStartTimeInSeconds=${end - 86400}&uploadEndTimeInSeconds=${end}`;
+      const payload = await apiFetch(url, accessToken);
+      rows.push(...(Array.isArray(payload) ? payload : extractRows(payload)));
+    }
+  }
+
+  return mergeByDate(rows.map(normalizeRecord).filter(Boolean));
+}
+
+const RECORD_FETCHERS = { google: fetchGoogleRecords, garmin: fetchGarminRecords };
+
+async function syncProvider(providerId) {
+  const accessToken = await ensureAccessToken(providerId);
+  const records = await RECORD_FETCHERS[providerId](accessToken);
+  if (records.length === 0) throw new Error("the API returned no daily records.");
+  connectProvider(providerId, records, `${PROVIDERS[providerId].name} API`);
+}
+
 // ===== Sample data =====
 function buildSampleRecords(providerId, today = new Date()) {
   const isGarmin = providerId === "garmin";
@@ -270,6 +659,7 @@ function connectProvider(providerId, records, sourceLabel) {
 function disconnectProvider(providerId) {
   fitnessState[providerId] = defaultState()[providerId];
   saveState();
+  clearTokens(providerId);
 }
 
 function mergedRecords(state = fitnessState) {
@@ -285,23 +675,28 @@ function mergedRecords(state = fitnessState) {
 }
 
 // ===== DOM =====
+function providerElements(providerId) {
+  return {
+    status: document.getElementById(`${providerId}-status`),
+    file: document.getElementById(`${providerId}-file`),
+    sample: document.getElementById(`${providerId}-sample`),
+    disconnect: document.getElementById(`${providerId}-disconnect`),
+    connect: document.getElementById(`${providerId}-connect`),
+    sync: document.getElementById(`${providerId}-sync`),
+    clientId: document.getElementById(`${providerId}-client-id`),
+    clientSecret: document.getElementById(`${providerId}-client-secret`),
+    tokenUrl: document.getElementById(`${providerId}-token-url`),
+    apiBase: document.getElementById(`${providerId}-api-base`)
+  };
+}
+
 const elements = {
   summaryGrid: document.getElementById("summary-grid"),
   recordsBody: document.getElementById("records-body"),
   recordsTable: document.getElementById("records-table"),
   recordsEmpty: document.getElementById("records-empty"),
-  google: {
-    status: document.getElementById("google-status"),
-    file: document.getElementById("google-file"),
-    sample: document.getElementById("google-sample"),
-    disconnect: document.getElementById("google-disconnect")
-  },
-  garmin: {
-    status: document.getElementById("garmin-status"),
-    file: document.getElementById("garmin-file"),
-    sample: document.getElementById("garmin-sample"),
-    disconnect: document.getElementById("garmin-disconnect")
-  }
+  google: providerElements("google"),
+  garmin: providerElements("garmin")
 };
 
 function formatSyncedAt(isoString) {
@@ -419,6 +814,80 @@ function handleFile(providerId, file) {
   reader.readAsText(file);
 }
 
+function showPending(providerId, message) {
+  const statusElement = elements[providerId].status;
+  statusElement.classList.remove("connected", "error");
+  statusElement.textContent = message;
+}
+
+function renderSettings(providerId) {
+  const controls = elements[providerId];
+  for (const field of API_OVERRIDE_FIELDS) {
+    if (!controls[field]) continue;
+    controls[field].value = apiSettings[providerId][field];
+  }
+}
+
+async function handleConnect(providerId) {
+  showPending(providerId, "Opening the sign-in page…");
+  try {
+    await startAuth(providerId);
+  } catch (error) {
+    showError(providerId, `Connection failed: ${error.message}`);
+  }
+}
+
+async function handleSync(providerId) {
+  showPending(providerId, "Syncing…");
+  try {
+    await syncProvider(providerId);
+    render();
+  } catch (error) {
+    showError(providerId, `Sync failed: ${error.message}`);
+  }
+}
+
+function clearAuthParamsFromUrl() {
+  window.history.replaceState({}, "", `${window.location.pathname}${window.location.hash}`);
+}
+
+async function handleAuthRedirect() {
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get("code");
+  const error = params.get("error");
+  if (!code && !error) return false;
+
+  const state = params.get("state");
+  const providerId = state && state.includes(":") ? state.slice(0, state.indexOf(":")) : null;
+  const pendingKey = providerId ? pendingAuthKey(providerId) : null;
+  const pending = pendingKey ? storage.get(pendingKey, null) : null;
+  if (pendingKey) storage.remove(pendingKey);
+  clearAuthParamsFromUrl();
+
+  if (!pending || !PROVIDERS[providerId]) return false;
+
+  if (error) {
+    showError(providerId, `Connection failed: ${error}`);
+    return false;
+  }
+
+  if (state !== pending.state) {
+    showError(providerId, "Connection failed: the sign-in state did not match.");
+    return false;
+  }
+
+  showPending(providerId, "Finishing sign-in…");
+  try {
+    saveTokens(providerId, await exchangeCode(providerId, code, pending.verifier, pending.redirectUri));
+    await syncProvider(providerId);
+    render();
+  } catch (exchangeError) {
+    showError(providerId, `Connection failed: ${exchangeError.message}`);
+  }
+
+  return true;
+}
+
 function wireProvider(providerId) {
   const controls = elements[providerId];
 
@@ -436,11 +905,23 @@ function wireProvider(providerId) {
     disconnectProvider(providerId);
     render();
   });
+
+  controls.connect.addEventListener("click", () => handleConnect(providerId));
+  controls.sync.addEventListener("click", () => handleSync(providerId));
+
+  for (const field of API_OVERRIDE_FIELDS) {
+    if (!controls[field]) continue;
+    controls[field].addEventListener("change", (event) => saveApiSetting(providerId, field, event.target.value));
+  }
 }
 
 function initFitnessPage() {
-  for (const providerId of Object.keys(PROVIDERS)) wireProvider(providerId);
+  for (const providerId of Object.keys(PROVIDERS)) {
+    wireProvider(providerId);
+    renderSettings(providerId);
+  }
   render();
+  return handleAuthRedirect();
 }
 
 initFitnessPage();
@@ -464,7 +945,30 @@ if (typeof module !== "undefined") {
       connectProvider,
       disconnectProvider,
       render,
-      FITNESS_STORAGE_KEY
+      mergeByDate,
+      round,
+      loadApiSettings,
+      saveApiSetting,
+      providerConfig,
+      loadTokens,
+      saveTokens,
+      clearTokens,
+      navigation,
+      buildAuthUrl,
+      startAuth,
+      exchangeCode,
+      ensureAccessToken,
+      apiFetch,
+      googleBucketToRecord,
+      fetchGoogleRecords,
+      fetchGarminRecords,
+      syncProvider,
+      handleAuthRedirect,
+      initFitnessPage,
+      FITNESS_STORAGE_KEY,
+      API_SETTINGS_KEY,
+      AUTH_TOKENS_KEY,
+      PENDING_AUTH_KEY_PREFIX
     }
   };
 }
