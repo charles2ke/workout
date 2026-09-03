@@ -544,6 +544,22 @@ describe("fitness.js", () => {
         expect(go).toHaveBeenCalledWith(expect.stringContaining("code_challenge="));
         go.mockRestore();
       });
+
+      test("rejects when the PKCE state cannot be stored", async () => {
+        api.saveApiSetting("google", "clientId", "gid");
+        const go = jest.spyOn(api.navigation, "go").mockImplementation(() => {});
+        const setItem = jest.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+          throw new Error("blocked");
+        });
+
+        try {
+          await expect(api.startAuth("google")).rejects.toThrow("failed to save OAuth state");
+          expect(go).not.toHaveBeenCalled();
+        } finally {
+          setItem.mockRestore();
+          go.mockRestore();
+        }
+      });
     });
 
     describe("token requests", () => {
