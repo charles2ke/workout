@@ -713,10 +713,26 @@ describe("workout.js", () => {
         configurable: true,
         writable: true
       });
-      document.execCommand = jest.fn();
+      document.execCommand = jest.fn().mockReturnValue(true);
       workoutContent.querySelector(".copy-btn").click();
       await Promise.resolve();
       expect(document.execCommand).toHaveBeenCalledWith("copy");
+    });
+
+    test("shows Copy failed when execCommand fallback fails", async () => {
+      Object.defineProperty(navigator, "clipboard", {
+        value: undefined,
+        configurable: true,
+        writable: true
+      });
+      document.execCommand = jest.fn().mockReturnValue(false);
+      workoutContent.querySelector(".copy-btn").click();
+      await Promise.resolve();
+      const btn = workoutContent.querySelector(".copy-btn");
+      expect(btn.textContent).toBe("Copy failed");
+      expect(document.getElementById("copy-announcement").textContent).toBe(
+        "Copy failed. Please try again."
+      );
     });
 
     test("shows Copy failed when clipboard rejects", async () => {

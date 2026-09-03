@@ -155,6 +155,16 @@ describe("fitness.js", () => {
       expect(rows[1].Note).toBe("");
     });
 
+    test("handles quoted newlines", () => {
+      const rows = api.parseCsv('Date,Note\r\n2026-08-20,"line one\nline two"\r\n');
+      expect(rows).toEqual([{ Date: "2026-08-20", Note: "line one\nline two" }]);
+    });
+
+    test("preserves quoted padding but trims unquoted padding", () => {
+      const rows = api.parseCsv('Date,Note,Steps\n2026-08-20,"  padded  ", 9000 ');
+      expect(rows).toEqual([{ Date: "2026-08-20", Note: "  padded  ", Steps: "9000" }]);
+    });
+
     test("header only → empty", () => expect(api.parseCsv("Date,Steps")).toEqual([]));
   });
 
@@ -241,6 +251,28 @@ describe("fitness.js", () => {
     test("garmin sample includes VO2 max", () => {
       const records = api.buildSampleRecords("garmin", new Date("2026-08-20T12:00:00Z"));
       expect(records[0].vo2Max).toBe(46);
+    });
+
+    test("uses the local calendar day, not the UTC day", () => {
+      // Simulate a timezone where the UTC day differs from the local day: the
+      // sample week must follow the local calendar, so toISOString() must not
+      // be used to derive the date key.
+      const isoSpy = jest
+        .spyOn(Date.prototype, "toISOString")
+        .mockReturnValue("2999-12-31T00:00:00.000Z");
+      try {
+        const records = api.buildSampleRecords("google", new Date(2026, 7, 20, 23, 30));
+        expect(records[0].date).toBe("2026-08-20");
+        expect(records[6].date).toBe("2026-08-14");
+      } finally {
+        isoSpy.mockRestore();
+      }
+    });
+  });
+
+  describe("toLocalDateKey", () => {
+    test("formats from local date parts with zero padding", () => {
+      expect(api.toLocalDateKey(new Date(2026, 0, 5, 12, 0))).toBe("2026-01-05");
     });
   });
 

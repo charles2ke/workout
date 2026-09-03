@@ -51,7 +51,6 @@ jobs:
 
       - name: Run Playwright tests
         run: npx playwright test
-        continue-on-error: true
 
       - name: Upload screenshots artifact
         id: screenshots
@@ -73,7 +72,8 @@ jobs:
   comment-screenshots:
     name: Post Playwright screenshots
     needs: test
-    if: github.event_name == 'pull_request'
+    # Runs even when the E2E tests fail so the screenshots are still linked on the PR.
+    if: always() && github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -150,10 +150,18 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Build site
+        run: npm run build
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'
+          path: 'dist'
 
       - name: Deploy to GitHub Pages
         id: deployment

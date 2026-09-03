@@ -8,15 +8,7 @@ A lightweight, dependency-free weekly workout planner. No frameworks, no bundler
 
 ## Live Site
 
-<!-- PAGES_URL_START -->
 [https://charles2ke.github.io/workout/](https://charles2ke.github.io/workout/)
-<!-- PAGES_URL_END -->
-
-## Last Deployed
-
-<!-- LAST_DEPLOYED_START -->
-2026-08-21 08:04 UTC
-<!-- LAST_DEPLOYED_END -->
 
 ## Pages
 

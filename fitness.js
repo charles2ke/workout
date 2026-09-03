@@ -69,6 +69,14 @@ function toNumber(value) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+// Formats a Date as YYYY-MM-DD using the local calendar day to avoid UTC/local
+// off-by-one keys when callers are working with local-calendar dates.
+function toLocalDateKey(date) {
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
 function toDateKey(value) {
   if (value === undefined || value === null || value === "") return null;
   const text = String(value).trim();
@@ -77,9 +85,7 @@ function toDateKey(value) {
 
   const parsed = new Date(Number.isFinite(Number(text)) ? Number(text) : text);
   if (Number.isNaN(parsed.getTime())) return null;
-  const month = String(parsed.getMonth() + 1).padStart(2, "0");
-  const day = String(parsed.getDate()).padStart(2, "0");
-  return `${parsed.getFullYear()}-${month}-${day}`;
+  return toLocalDateKey(parsed);
 }
 
 function normalizeRecord(raw) {
@@ -106,42 +112,64 @@ function normalizeRecord(raw) {
   };
 }
 
-function splitCsvLine(line) {
-  const cells = [];
+function splitCsvRows(text) {
+  const rows = [];
+  let cells = [];
   let current = "";
   let quoted = false;
+  let cellQuoted = false;
+  let rowHasValue = false;
 
-  for (let index = 0; index < line.length; index += 1) {
-    const char = line[index];
-    if (char === '"') {
-      if (quoted && line[index + 1] === '"') {
+  const pushCell = () => {
+    cells.push(cellQuoted ? current : current.trim());
+    current = "";
+    cellQuoted = false;
+  };
+
+  const pushRow = () => {
+    pushCell();
+    if (rowHasValue) rows.push(cells);
+    cells = [];
+    rowHasValue = false;
+  };
+
+  const normalized = String(text).replace(/\r\n?/g, "\n");
+  for (let index = 0; index < normalized.length; index += 1) {
+    const char = normalized[index];
+    if (quoted) {
+      if (char === '"' && normalized[index + 1] === '"') {
         current += '"';
         index += 1;
+      } else if (char === '"') {
+        quoted = false;
       } else {
-        quoted = !quoted;
+        current += char;
       }
-    } else if (char === "," && !quoted) {
-      cells.push(current.trim());
-      current = "";
+    } else if (char === '"') {
+      quoted = true;
+      cellQuoted = true;
+      rowHasValue = true;
+    } else if (char === ",") {
+      rowHasValue = true;
+      pushCell();
+    } else if (char === "\n") {
+      pushRow();
     } else {
       current += char;
+      if (char.trim() !== "") rowHasValue = true;
     }
   }
 
-  cells.push(current.trim());
-  return cells;
+  pushRow();
+  return rows;
 }
 
 function parseCsv(text) {
-  const lines = String(text)
-    .split(/\r?\n/)
-    .filter((line) => line.trim() !== "");
+  const rows = splitCsvRows(text);
+  if (rows.length < 2) return [];
 
-  if (lines.length < 2) return [];
-
-  const headers = splitCsvLine(lines[0]);
-  return lines.slice(1).map((line) => {
-    const cells = splitCsvLine(line);
+  const headers = rows[0];
+  return rows.slice(1).map((cells) => {
     const row = {};
     headers.forEach((header, index) => {
       row[header] = cells[index] === undefined ? "" : cells[index];
@@ -602,7 +630,7 @@ function buildSampleRecords(providerId, today = new Date()) {
     const wobble = (offset % 3) - 1;
 
     records.push({
-      date: toDateKey(date.toISOString()),
+      date: toLocalDateKey(date),
       steps: (isGarmin ? 9200 : 8400) + wobble * 850,
       restingHeartRate: (isGarmin ? 54 : 56) + wobble,
       sleepHours: Math.round(((isGarmin ? 7.2 : 7.0) + wobble * 0.4) * 10) / 10,
@@ -969,6 +997,7 @@ if (typeof module !== "undefined") {
       parseFitnessData,
       normalizeRecord,
       toDateKey,
+      toLocalDateKey,
       toNumber,
       summarize,
       formatNumber,
