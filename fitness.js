@@ -577,19 +577,16 @@ async function fetchGarminRecords(accessToken, now = Date.now()) {
   return mergeByDate(rows.map(normalizeRecord).filter(Boolean));
 }
 
-const RECORD_FETCHERS = { google: fetchGoogleRecords, garmin: fetchGarminRecords };
+// Dispatched explicitly so a provider name from storage or a redirect cannot select another function.
+async function fetchProviderRecords(providerId, accessToken) {
+  if (providerId === "google") return fetchGoogleRecords(accessToken);
+  if (providerId === "garmin") return fetchGarminRecords(accessToken);
+  throw new Error("unsupported fitness provider.");
+}
 
 async function syncProvider(providerId) {
-  const fetchRecords = Object.prototype.hasOwnProperty.call(RECORD_FETCHERS, providerId)
-    ? RECORD_FETCHERS[providerId]
-    : null;
-
-  if (typeof fetchRecords !== "function") {
-    throw new Error("unsupported fitness provider.");
-  }
-
   const accessToken = await ensureAccessToken(providerId);
-  const records = await fetchRecords(accessToken);
+  const records = await fetchProviderRecords(providerId, accessToken);
   if (records.length === 0) throw new Error("the API returned no daily records.");
   connectProvider(providerId, records, `${PROVIDERS[providerId].name} API`);
 }

@@ -828,6 +828,7 @@ describe("fitness.js", () => {
       });
 
       test("rejects an unsupported provider name", async () => {
+        api.saveTokens("toString", { accessToken: "at", refreshToken: null, expiresAt: Date.now() + 600000 });
         await expect(api.syncProvider("toString")).rejects.toThrow("unsupported fitness provider");
       });
     });
