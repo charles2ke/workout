@@ -552,11 +552,14 @@ describe("fitness.js", () => {
           throw new Error("blocked");
         });
 
-        await expect(api.startAuth("google")).rejects.toThrow("local storage");
+        try {
+          await expect(api.startAuth("google")).rejects.toThrow("local storage");
 
-        expect(go).not.toHaveBeenCalled();
-        setItem.mockRestore();
-        go.mockRestore();
+          expect(go).not.toHaveBeenCalled();
+        } finally {
+          setItem.mockRestore();
+          go.mockRestore();
+        }
       });
     });
 
