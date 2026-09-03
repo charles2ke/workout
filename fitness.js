@@ -69,6 +69,14 @@ function toNumber(value) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+// Formats a Date as YYYY-MM-DD using the local calendar day, so that a date
+// never shifts by one day for users whose timezone differs from UTC.
+function toLocalDateKey(date) {
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
 function toDateKey(value) {
   if (value === undefined || value === null || value === "") return null;
   const text = String(value).trim();
@@ -77,9 +85,7 @@ function toDateKey(value) {
 
   const parsed = new Date(Number.isFinite(Number(text)) ? Number(text) : text);
   if (Number.isNaN(parsed.getTime())) return null;
-  const month = String(parsed.getMonth() + 1).padStart(2, "0");
-  const day = String(parsed.getDate()).padStart(2, "0");
-  return `${parsed.getFullYear()}-${month}-${day}`;
+  return toLocalDateKey(parsed);
 }
 
 function normalizeRecord(raw) {
@@ -602,7 +608,7 @@ function buildSampleRecords(providerId, today = new Date()) {
     const wobble = (offset % 3) - 1;
 
     records.push({
-      date: toDateKey(date.toISOString()),
+      date: toLocalDateKey(date),
       steps: (isGarmin ? 9200 : 8400) + wobble * 850,
       restingHeartRate: (isGarmin ? 54 : 56) + wobble,
       sleepHours: Math.round(((isGarmin ? 7.2 : 7.0) + wobble * 0.4) * 10) / 10,
@@ -969,6 +975,7 @@ if (typeof module !== "undefined") {
       parseFitnessData,
       normalizeRecord,
       toDateKey,
+      toLocalDateKey,
       toNumber,
       summarize,
       formatNumber,
