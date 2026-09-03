@@ -100,8 +100,9 @@ jobs:
           keyPassword: ${{ env.ANDROID_KEY_PASSWORD }}
 
       - name: Rename APK with version
+        env:
+          TAG: ${{ github.event.release.tag_name }}
         run: |
-          TAG="${{ github.event.release.tag_name }}"
           cp android/app/build/outputs/apk/debug/app-debug.apk \
              "workout-android-${TAG}.apk" || true
           cp android/app/build/outputs/bundle/release/app-release.aab \
@@ -218,8 +219,9 @@ jobs:
 
       - name: Rename IPA with version
         if: ${{ env.APPLE_CERTIFICATE != '' }}
+        env:
+          TAG: ${{ github.event.release.tag_name }}
         run: |
-          TAG="${{ github.event.release.tag_name }}"
           cp ios/App/export/*.ipa "workout-ios-ipados-${TAG}.ipa" || true
 
       - name: Upload iOS build artifact
@@ -289,8 +291,9 @@ jobs:
 
       - name: Build Garmin app for all supported devices
         if: ${{ steps.garmin-config.outputs.enabled == 'true' }}
+        env:
+          TAG: ${{ github.event.release.tag_name }}
         run: |
-          TAG="${{ github.event.release.tag_name }}"
           mkdir -p garmin-builds
           for device in fenix7 forerunner955 venu2 vivoactive4 epix2; do
             echo "▶ Building for $device…"

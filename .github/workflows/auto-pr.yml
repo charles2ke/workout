@@ -21,8 +21,8 @@ jobs:
       - name: Create draft PR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: ${{ github.ref_name }}
         run: |
-          BRANCH="${{ github.ref_name }}"
           TITLE="$(git log -1 --pretty=%s)"
           BODY="Automated PR opened from branch \`${BRANCH}\` after push."
 
