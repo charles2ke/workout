@@ -826,6 +826,10 @@ describe("fitness.js", () => {
         global.fetch = jest.fn().mockResolvedValue(jsonResponse([]));
         await expect(api.syncProvider("garmin")).rejects.toThrow("no daily records");
       });
+
+      test("rejects an unsupported provider name", async () => {
+        await expect(api.syncProvider("toString")).rejects.toThrow("unsupported fitness provider");
+      });
     });
 
     describe("handleAuthRedirect", () => {
