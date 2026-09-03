@@ -544,6 +544,20 @@ describe("fitness.js", () => {
         expect(go).toHaveBeenCalledWith(expect.stringContaining("code_challenge="));
         go.mockRestore();
       });
+
+      test("rejects and does not navigate when the pending state cannot be saved", async () => {
+        api.saveApiSetting("google", "clientId", "gid");
+        const go = jest.spyOn(api.navigation, "go").mockImplementation(() => {});
+        const setItem = jest.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+          throw new Error("blocked");
+        });
+
+        await expect(api.startAuth("google")).rejects.toThrow("local storage");
+
+        expect(go).not.toHaveBeenCalled();
+        setItem.mockRestore();
+        go.mockRestore();
+      });
     });
 
     describe("token requests", () => {
