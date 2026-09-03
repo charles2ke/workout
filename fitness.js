@@ -69,8 +69,8 @@ function toNumber(value) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-// Formats a Date as YYYY-MM-DD using the local calendar day, so that a date
-// never shifts by one day for users whose timezone differs from UTC.
+// Formats a Date as YYYY-MM-DD using the local calendar day to avoid UTC/local
+// off-by-one keys when callers are working with local-calendar dates.
 function toLocalDateKey(date) {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
