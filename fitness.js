@@ -117,16 +117,20 @@ function splitCsvRows(text) {
   let cells = [];
   let current = "";
   let quoted = false;
+  let cellQuoted = false;
+  let rowHasValue = false;
 
   const pushCell = () => {
-    cells.push(current.trim());
+    cells.push(cellQuoted ? current : current.trim());
     current = "";
+    cellQuoted = false;
   };
 
   const pushRow = () => {
     pushCell();
-    if (cells.length > 1 || cells[0] !== "") rows.push(cells);
+    if (rowHasValue) rows.push(cells);
     cells = [];
+    rowHasValue = false;
   };
 
   const normalized = String(text).replace(/\r\n?/g, "\n");
@@ -143,12 +147,16 @@ function splitCsvRows(text) {
       }
     } else if (char === '"') {
       quoted = true;
+      cellQuoted = true;
+      rowHasValue = true;
     } else if (char === ",") {
+      rowHasValue = true;
       pushCell();
     } else if (char === "\n") {
       pushRow();
     } else {
       current += char;
+      if (char.trim() !== "") rowHasValue = true;
     }
   }
 

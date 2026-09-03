@@ -160,6 +160,11 @@ describe("fitness.js", () => {
       expect(rows).toEqual([{ Date: "2026-08-20", Note: "line one\nline two" }]);
     });
 
+    test("preserves quoted padding but trims unquoted padding", () => {
+      const rows = api.parseCsv('Date,Note,Steps\n2026-08-20,"  padded  ", 9000 ');
+      expect(rows).toEqual([{ Date: "2026-08-20", Note: "  padded  ", Steps: "9000" }]);
+    });
+
     test("header only → empty", () => expect(api.parseCsv("Date,Steps")).toEqual([]));
   });
 
