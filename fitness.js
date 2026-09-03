@@ -233,7 +233,7 @@ const API_DEFAULTS = {
   }
 };
 
-const API_OVERRIDE_FIELDS = ["clientId", "clientSecret", "tokenUrl", "apiBase"];
+const API_OVERRIDE_FIELDS = ["clientId", "tokenUrl", "apiBase"];
 const DAY_MS = 86400000;
 const SYNC_DAYS = 7;
 
@@ -266,7 +266,6 @@ function providerConfig(providerId) {
   return {
     ...defaults,
     clientId: overrides.clientId,
-    clientSecret: providerId === "garmin" ? overrides.clientSecret : "",
     tokenUrl: overrides.tokenUrl || defaults.tokenUrl,
     apiBase: overrides.apiBase || defaults.apiBase
   };
@@ -407,16 +406,11 @@ async function readJson(response) {
 async function requestTokens(providerId, params) {
   const config = providerConfig(providerId);
   const headers = { "Content-Type": "application/x-www-form-urlencoded" };
-  const useBasicAuth = providerId === "garmin" && config.clientSecret;
-  if (useBasicAuth) {
-    const credentials = new TextEncoder().encode(`${config.clientId}:${config.clientSecret}`);
-    headers.Authorization = `Basic ${btoa(String.fromCharCode(...credentials))}`;
-  }
 
   const response = await fetch(config.tokenUrl, {
     method: "POST",
     headers,
-    body: new URLSearchParams({ ...(useBasicAuth ? {} : { client_id: config.clientId }), ...params }).toString()
+    body: new URLSearchParams({ client_id: config.clientId, ...params }).toString()
   });
 
   const payload = await readJson(response);
@@ -718,7 +712,6 @@ function providerElements(providerId) {
     connect: document.getElementById(`${providerId}-connect`),
     sync: document.getElementById(`${providerId}-sync`),
     clientId: document.getElementById(`${providerId}-client-id`),
-    clientSecret: document.getElementById(`${providerId}-client-secret`),
     tokenUrl: document.getElementById(`${providerId}-token-url`),
     apiBase: document.getElementById(`${providerId}-api-base`)
   };

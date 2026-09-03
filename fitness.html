@@ -362,13 +362,11 @@
             <summary>API settings</summary>
             <label for="garmin-client-id">OAuth client ID</label>
             <input type="text" id="garmin-client-id" autocomplete="off" spellcheck="false" placeholder="your-client-id">
-            <label for="garmin-client-secret">OAuth client secret (optional)</label>
-            <input type="password" id="garmin-client-secret" autocomplete="off" spellcheck="false" placeholder="your-client-secret">
             <label for="garmin-token-url">Token endpoint (optional override)</label>
             <input type="url" id="garmin-token-url" autocomplete="off" spellcheck="false" placeholder="https://…">
             <label for="garmin-api-base">API base URL (optional override)</label>
             <input type="url" id="garmin-api-base" autocomplete="off" spellcheck="false" placeholder="https://…">
-            <p class="api-hint">Uses OAuth 2.0 with PKCE against the Garmin Health Wellness API. Register this page&rsquo;s URL as the redirect URI in the <a href="https://developer.garmin.com/gc-developer-program/health-api/">Garmin developer portal</a>. If Garmin requires client authentication, the client secret is sent with token requests using HTTP Basic auth. Settings and tokens stay in this browser; use the overrides to point at your own CORS-enabled proxy if a provider blocks direct browser calls or you do not want to store a secret locally.</p>
+            <p class="api-hint">Uses OAuth 2.0 with PKCE against the Garmin Health Wellness API. Register this page&rsquo;s URL as the redirect URI in the <a href="https://developer.garmin.com/gc-developer-program/health-api/">Garmin developer portal</a>. Settings and tokens stay in this browser; use the overrides to point at your own CORS-enabled proxy if a provider requires client authentication or blocks direct browser calls.</p>
           </details>
         </article>
       </section>

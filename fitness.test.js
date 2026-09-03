@@ -433,8 +433,8 @@ describe("fitness.js", () => {
     describe("settings", () => {
       test("defaults to empty overrides", () => {
         expect(api.loadApiSettings()).toEqual({
-          google: { clientId: "", clientSecret: "", tokenUrl: "", apiBase: "" },
-          garmin: { clientId: "", clientSecret: "", tokenUrl: "", apiBase: "" }
+          google: { clientId: "", tokenUrl: "", apiBase: "" },
+          garmin: { clientId: "", tokenUrl: "", apiBase: "" }
         });
       });
 
@@ -445,7 +445,7 @@ describe("fitness.js", () => {
             garmin: "broken"
           }
         })._test;
-        expect(module.loadApiSettings().google).toEqual({ clientId: "abc", clientSecret: "", tokenUrl: "", apiBase: "" });
+        expect(module.loadApiSettings().google).toEqual({ clientId: "abc", tokenUrl: "", apiBase: "" });
         expect(module.loadApiSettings().garmin.clientId).toBe("");
       });
 
@@ -455,21 +455,14 @@ describe("fitness.js", () => {
 
       test("saveApiSetting persists and providerConfig applies overrides", () => {
         api.saveApiSetting("garmin", "clientId", " gid ");
-        api.saveApiSetting("garmin", "clientSecret", " secret ");
         api.saveApiSetting("garmin", "apiBase", "https://proxy.example/api");
         api.saveApiSetting("garmin", "tokenUrl", undefined);
 
         const config = api.providerConfig("garmin");
         expect(config.clientId).toBe("gid");
-        expect(config.clientSecret).toBe("secret");
         expect(config.apiBase).toBe("https://proxy.example/api");
         expect(config.tokenUrl).toContain("garmin.com");
         expect(JSON.parse(localStorage.getItem(api.API_SETTINGS_KEY)).garmin.clientId).toBe("gid");
-      });
-
-      test("ignores a saved client secret for Google", () => {
-        api.saveApiSetting("google", "clientSecret", "secret");
-        expect(api.providerConfig("google").clientSecret).toBe("");
       });
     });
 
@@ -619,16 +612,15 @@ describe("fitness.js", () => {
         expect(options.body).toContain("code_verifier=verifier");
       });
 
-      test("sends Garmin client authentication when a client secret is saved", async () => {
+      test("sends the client id in the token request body for Garmin", async () => {
         api.saveApiSetting("garmin", "clientId", "gid");
-        api.saveApiSetting("garmin", "clientSecret", "secret");
         global.fetch = jest.fn().mockResolvedValue(jsonResponse({ access_token: "at", expires_in: 100 }));
 
         await api.exchangeCode("garmin", "code", "verifier", "https://app/");
 
         const [, options] = global.fetch.mock.calls[0];
-        expect(options.headers.Authorization).toBe("Basic Z2lkOnNlY3JldA==");
-        expect(options.body).not.toContain("client_id=gid");
+        expect(options.headers.Authorization).toBeUndefined();
+        expect(options.body).toContain("client_id=gid");
       });
 
       test("defaults the lifetime and refresh token when absent", async () => {
