@@ -74,9 +74,12 @@ test.describe("My Fitness page", () => {
     await page.locator("article:has(#garmin-client-id) .api-settings summary").click();
     await page.locator("#garmin-client-id").fill("demo-client-id");
     await page.locator("#garmin-client-id").blur();
+    await page.locator("#garmin-client-secret").fill("demo-client-secret");
+    await page.locator("#garmin-client-secret").blur();
     await page.reload();
     await page.locator("article:has(#garmin-client-id) .api-settings summary").click();
     await expect(page.locator("#garmin-client-id")).toHaveValue("demo-client-id");
+    await expect(page.locator("#garmin-client-secret")).toHaveValue("demo-client-secret");
     await page.screenshot({ path: "playwright-screenshots/27-fitness-api-settings.png", fullPage: true });
   });
 

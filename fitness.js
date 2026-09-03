@@ -2,7 +2,7 @@
 const FITNESS_STORAGE_KEY = "fitnessSources";
 const API_SETTINGS_KEY = "fitnessApiSettings";
 const AUTH_TOKENS_KEY = "fitnessAuthTokens";
-const PENDING_AUTH_KEY = "fitnessPendingAuth";
+const PENDING_AUTH_KEY_PREFIX = "fitnessPendingAuth:";
 
 const storage = {
   get(key, fallback) {
@@ -205,8 +205,8 @@ function round(value, decimals = 0) {
 
 // ===== Live API connections (OAuth 2.0 + PKCE) =====
 // Both providers are contacted straight from the browser: no server, no secrets
-// in the repository. The OAuth client ID (and, when a provider's endpoints are
-// not CORS-enabled, a proxy base URL) is supplied by the user and kept in
+// in the repository. OAuth credentials (and, when a provider's endpoints are
+// not CORS-enabled, a proxy base URL) are supplied by the user and kept in
 // localStorage alongside the tokens.
 const API_DEFAULTS = {
   google: {
@@ -229,7 +229,7 @@ const API_DEFAULTS = {
   }
 };
 
-const API_OVERRIDE_FIELDS = ["clientId", "tokenUrl", "apiBase"];
+const API_OVERRIDE_FIELDS = ["clientId", "clientSecret", "tokenUrl", "apiBase"];
 const DAY_MS = 86400000;
 const SYNC_DAYS = 7;
 
@@ -262,6 +262,7 @@ function providerConfig(providerId) {
   return {
     ...defaults,
     clientId: overrides.clientId,
+    clientSecret: providerId === "garmin" ? overrides.clientSecret : "",
     tokenUrl: overrides.tokenUrl || defaults.tokenUrl,
     apiBase: overrides.apiBase || defaults.apiBase
   };
@@ -345,6 +346,10 @@ function buildAuthUrl(providerId, { codeChallenge, state, redirectUri }) {
   return url.toString();
 }
 
+function pendingAuthKey(providerId) {
+  return `${PENDING_AUTH_KEY_PREFIX}${providerId}`;
+}
+
 async function startAuth(providerId) {
   const config = providerConfig(providerId);
   if (!config.clientId) {
@@ -352,11 +357,11 @@ async function startAuth(providerId) {
   }
 
   const verifier = randomToken();
-  const state = randomToken(16);
+  const state = `${providerId}:${randomToken(16)}`;
   const redirectUri = currentRedirectUri();
   const codeChallenge = await createCodeChallenge(verifier);
 
-  if (!storage.set(PENDING_AUTH_KEY, { providerId, verifier, state, redirectUri })) {
+  if (!storage.set(pendingAuthKey(providerId), { providerId, verifier, state, redirectUri })) {
     throw new Error("failed to save OAuth state in local storage.");
   }
   navigation.go(buildAuthUrl(providerId, { codeChallenge, state, redirectUri }));
@@ -372,10 +377,17 @@ async function readJson(response) {
 
 async function requestTokens(providerId, params) {
   const config = providerConfig(providerId);
+  const headers = { "Content-Type": "application/x-www-form-urlencoded" };
+  const useBasicAuth = providerId === "garmin" && config.clientSecret;
+  if (useBasicAuth) {
+    const credentials = new TextEncoder().encode(`${config.clientId}:${config.clientSecret}`);
+    headers.Authorization = `Basic ${btoa(String.fromCharCode(...credentials))}`;
+  }
+
   const response = await fetch(config.tokenUrl, {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ client_id: config.clientId, ...params }).toString()
+    headers,
+    body: new URLSearchParams({ ...(useBasicAuth ? {} : { client_id: config.clientId }), ...params }).toString()
   });
 
   const payload = await readJson(response);
@@ -672,6 +684,7 @@ function providerElements(providerId) {
     connect: document.getElementById(`${providerId}-connect`),
     sync: document.getElementById(`${providerId}-sync`),
     clientId: document.getElementById(`${providerId}-client-id`),
+    clientSecret: document.getElementById(`${providerId}-client-secret`),
     tokenUrl: document.getElementById(`${providerId}-token-url`),
     apiBase: document.getElementById(`${providerId}-api-base`)
   };
@@ -810,6 +823,7 @@ function showPending(providerId, message) {
 function renderSettings(providerId) {
   const controls = elements[providerId];
   for (const field of API_OVERRIDE_FIELDS) {
+    if (!controls[field]) continue;
     controls[field].value = apiSettings[providerId][field];
   }
 }
@@ -843,19 +857,21 @@ async function handleAuthRedirect() {
   const error = params.get("error");
   if (!code && !error) return false;
 
-  const pending = storage.get(PENDING_AUTH_KEY, null);
-  storage.remove(PENDING_AUTH_KEY);
+  const state = params.get("state");
+  const providerId = state && state.includes(":") ? state.slice(0, state.indexOf(":")) : null;
+  const pendingKey = providerId ? pendingAuthKey(providerId) : null;
+  const pending = pendingKey ? storage.get(pendingKey, null) : null;
+  if (pendingKey) storage.remove(pendingKey);
   clearAuthParamsFromUrl();
 
-  if (!pending || !PROVIDERS[pending.providerId]) return false;
-  const providerId = pending.providerId;
+  if (!pending || !PROVIDERS[providerId]) return false;
 
   if (error) {
     showError(providerId, `Connection failed: ${error}`);
     return false;
   }
 
-  if (params.get("state") !== pending.state) {
+  if (state !== pending.state) {
     showError(providerId, "Connection failed: the sign-in state did not match.");
     return false;
   }
@@ -894,6 +910,7 @@ function wireProvider(providerId) {
   controls.sync.addEventListener("click", () => handleSync(providerId));
 
   for (const field of API_OVERRIDE_FIELDS) {
+    if (!controls[field]) continue;
     controls[field].addEventListener("change", (event) => saveApiSetting(providerId, field, event.target.value));
   }
 }
@@ -951,7 +968,7 @@ if (typeof module !== "undefined") {
       FITNESS_STORAGE_KEY,
       API_SETTINGS_KEY,
       AUTH_TOKENS_KEY,
-      PENDING_AUTH_KEY
+      PENDING_AUTH_KEY_PREFIX
     }
   };
 }
