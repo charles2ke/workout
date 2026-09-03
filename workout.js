@@ -458,6 +458,8 @@ workoutContent.addEventListener("click", async (event) => {
         if (!document.execCommand("copy")) {
           throw new Error("Copy failed.");
         }
+      } catch {
+        throw new Error("Copy failed.");
       } finally {
         fallbackInput.remove();
       }
