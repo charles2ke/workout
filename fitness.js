@@ -3,6 +3,10 @@ const FITNESS_STORAGE_KEY = "fitnessSources";
 const API_SETTINGS_KEY = "fitnessApiSettings";
 const AUTH_TOKENS_KEY = "fitnessAuthTokens";
 const PENDING_AUTH_KEY_PREFIX = "fitnessPendingAuth:";
+// Several connect attempts can be in flight at once (extra tabs, a back button, a retry),
+// so pending attempts are kept as a bounded, expiring list instead of a single record.
+const PENDING_AUTH_TTL_MS = 10 * 60 * 1000;
+const MAX_PENDING_AUTH = 5;
 
 const storage = {
   get(key, fallback) {
@@ -350,6 +354,31 @@ function pendingAuthKey(providerId) {
   return `${PENDING_AUTH_KEY_PREFIX}${providerId}`;
 }
 
+function readPendingAuth(providerId) {
+  const stored = storage.get(pendingAuthKey(providerId), []);
+  if (!Array.isArray(stored)) return [];
+  const now = Date.now();
+  return stored.filter((entry) => entry && now - Number(entry.createdAt) < PENDING_AUTH_TTL_MS);
+}
+
+function writePendingAuth(providerId, entries) {
+  if (!entries.length) return storage.remove(pendingAuthKey(providerId));
+  return storage.set(pendingAuthKey(providerId), entries);
+}
+
+function addPendingAuth(providerId, entry) {
+  const entries = [...readPendingAuth(providerId), { ...entry, createdAt: Date.now() }];
+  return writePendingAuth(providerId, entries.slice(-MAX_PENDING_AUTH));
+}
+
+// Removes and returns only the attempt matching this redirect, so other attempts stay valid.
+function takePendingAuth(providerId, state) {
+  const entries = readPendingAuth(providerId);
+  const pending = entries.find((entry) => entry.state === state) || null;
+  writePendingAuth(providerId, pending ? entries.filter((entry) => entry !== pending) : entries);
+  return { pending, hadEntries: entries.length > 0 };
+}
+
 async function startAuth(providerId) {
   const config = providerConfig(providerId);
   if (!config.clientId) {
@@ -361,7 +390,7 @@ async function startAuth(providerId) {
   const redirectUri = currentRedirectUri();
   const codeChallenge = await createCodeChallenge(verifier);
 
-  if (!storage.set(pendingAuthKey(providerId), { providerId, verifier, state, redirectUri })) {
+  if (!addPendingAuth(providerId, { providerId, verifier, state, redirectUri })) {
     throw new Error("failed to save OAuth state in local storage.");
   }
   navigation.go(buildAuthUrl(providerId, { codeChallenge, state, redirectUri }));
@@ -859,20 +888,20 @@ async function handleAuthRedirect() {
 
   const state = params.get("state");
   const providerId = state && state.includes(":") ? state.slice(0, state.indexOf(":")) : null;
-  const pendingKey = providerId ? pendingAuthKey(providerId) : null;
-  const pending = pendingKey ? storage.get(pendingKey, null) : null;
-  if (pendingKey) storage.remove(pendingKey);
+  const { pending, hadEntries } = providerId
+    ? takePendingAuth(providerId, state)
+    : { pending: null, hadEntries: false };
   clearAuthParamsFromUrl();
 
-  if (!pending || !PROVIDERS[providerId]) return false;
+  if (!PROVIDERS[providerId]) return false;
 
-  if (error) {
-    showError(providerId, `Connection failed: ${error}`);
+  if (!pending) {
+    if (hadEntries) showError(providerId, "Connection failed: the sign-in state did not match.");
     return false;
   }
 
-  if (state !== pending.state) {
-    showError(providerId, "Connection failed: the sign-in state did not match.");
+  if (error) {
+    showError(providerId, `Connection failed: ${error}`);
     return false;
   }
 
@@ -956,6 +985,9 @@ if (typeof module !== "undefined") {
       navigation,
       buildAuthUrl,
       startAuth,
+      readPendingAuth,
+      addPendingAuth,
+      takePendingAuth,
       exchangeCode,
       ensureAccessToken,
       apiFetch,
@@ -968,7 +1000,9 @@ if (typeof module !== "undefined") {
       FITNESS_STORAGE_KEY,
       API_SETTINGS_KEY,
       AUTH_TOKENS_KEY,
-      PENDING_AUTH_KEY_PREFIX
+      PENDING_AUTH_KEY_PREFIX,
+      PENDING_AUTH_TTL_MS,
+      MAX_PENDING_AUTH
     }
   };
 }

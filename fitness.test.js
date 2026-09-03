@@ -537,12 +537,69 @@ describe("fitness.js", () => {
 
         await api.startAuth("google");
 
-        const pending = JSON.parse(localStorage.getItem(api.PENDING_AUTH_KEY_PREFIX + "google"));
+        const [pending] = JSON.parse(localStorage.getItem(api.PENDING_AUTH_KEY_PREFIX + "google"));
         expect(pending.providerId).toBe("google");
         expect(pending.state).toMatch(/^google:/);
         expect(pending.verifier).toEqual(expect.any(String));
+        expect(pending.createdAt).toEqual(expect.any(Number));
         expect(go).toHaveBeenCalledWith(expect.stringContaining("code_challenge="));
         go.mockRestore();
+      });
+
+      test("keeps earlier attempts instead of overwriting them", async () => {
+        api.saveApiSetting("google", "clientId", "gid");
+        const go = jest.spyOn(api.navigation, "go").mockImplementation(() => {});
+
+        await api.startAuth("google");
+        await api.startAuth("google");
+
+        const entries = api.readPendingAuth("google");
+        expect(entries).toHaveLength(2);
+        expect(entries[0].createdAt).toBeLessThanOrEqual(entries[1].createdAt);
+        go.mockRestore();
+      });
+
+      test("keeps only the most recent attempts", async () => {
+        api.saveApiSetting("google", "clientId", "gid");
+        const go = jest.spyOn(api.navigation, "go").mockImplementation(() => {});
+
+        for (let index = 0; index <= api.MAX_PENDING_AUTH; index += 1) await api.startAuth("google");
+
+        expect(api.readPendingAuth("google")).toHaveLength(api.MAX_PENDING_AUTH);
+        go.mockRestore();
+      });
+
+      test("throws when the pending state cannot be stored", async () => {
+        api.saveApiSetting("google", "clientId", "gid");
+        const setItem = jest.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+          throw new Error("blocked");
+        });
+
+        await expect(api.startAuth("google")).rejects.toThrow("local storage");
+
+        setItem.mockRestore();
+      });
+    });
+
+    describe("pending auth storage", () => {
+      test("ignores a legacy non-array value", () => {
+        localStorage.setItem(api.PENDING_AUTH_KEY_PREFIX + "google", JSON.stringify({ state: "google:st" }));
+        expect(api.readPendingAuth("google")).toEqual([]);
+      });
+
+      test("drops expired and empty entries", () => {
+        localStorage.setItem(
+          api.PENDING_AUTH_KEY_PREFIX + "google",
+          JSON.stringify([null, { state: "google:old", createdAt: Date.now() - api.PENDING_AUTH_TTL_MS - 1 }])
+        );
+        expect(api.readPendingAuth("google")).toEqual([]);
+      });
+
+      test("removes the key once the last attempt is taken", () => {
+        api.addPendingAuth("google", { providerId: "google", state: "google:st", verifier: "v", redirectUri: "u" });
+
+        expect(api.takePendingAuth("google", "google:st").pending.verifier).toBe("v");
+        expect(localStorage.getItem(api.PENDING_AUTH_KEY_PREFIX + "google")).toBeNull();
       });
     });
 
@@ -772,8 +829,12 @@ describe("fitness.js", () => {
     });
 
     describe("handleAuthRedirect", () => {
-      function setPending(pending) {
-        localStorage.setItem(api.PENDING_AUTH_KEY_PREFIX + pending.providerId, JSON.stringify(pending));
+      function setPending(...pendings) {
+        const [{ providerId }] = pendings;
+        localStorage.setItem(
+          api.PENDING_AUTH_KEY_PREFIX + providerId,
+          JSON.stringify(pendings.map((pending) => ({ createdAt: Date.now(), ...pending })))
+        );
       }
 
       test("does nothing without OAuth parameters", async () => {
@@ -837,6 +898,39 @@ describe("fitness.js", () => {
 
         await expect(api.handleAuthRedirect()).resolves.toBe(true);
         expect(document.getElementById("garmin-status").textContent).toContain("Connection failed");
+      });
+
+      test("accepts an earlier attempt after a second connect attempt", async () => {
+        window.history.replaceState({}, "", "/fitness.html?code=abc&state=google:first");
+        setPending(
+          { providerId: "google", state: "google:first", verifier: "v1", redirectUri: "https://app/" },
+          { providerId: "google", state: "google:second", verifier: "v2", redirectUri: "https://app/" }
+        );
+        global.fetch = jest
+          .fn()
+          .mockResolvedValueOnce(jsonResponse({ access_token: "at", refresh_token: "rt", expires_in: 3600 }))
+          .mockResolvedValueOnce(jsonResponse({ bucket: [googleBucket()] }));
+
+        await expect(api.handleAuthRedirect()).resolves.toBe(true);
+
+        expect(document.getElementById("google-status").textContent).toContain("Google Health API");
+        const [, options] = global.fetch.mock.calls[0];
+        expect(options.body).toContain("code_verifier=v1");
+        expect(api.readPendingAuth("google").map((entry) => entry.state)).toEqual(["google:second"]);
+      });
+
+      test("ignores an expired attempt", async () => {
+        window.history.replaceState({}, "", "/fitness.html?code=abc&state=google:st");
+        setPending({
+          providerId: "google",
+          state: "google:st",
+          verifier: "v",
+          redirectUri: "https://app/",
+          createdAt: Date.now() - api.PENDING_AUTH_TTL_MS - 1
+        });
+
+        await expect(api.handleAuthRedirect()).resolves.toBe(false);
+        expect(document.getElementById("google-status").textContent).not.toContain("state did not match");
       });
     });
 
