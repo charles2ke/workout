@@ -52,10 +52,12 @@ const APP_SHELL_URLS = new Set(
     return `${url.origin}${url.pathname}`;
   })
 );
+// Every APP_SHELL and OPTIONAL_SHELL URL must match a rule so new cached asset
+// types choose their validation intentionally.
 const SHELL_RESPONSE_RULES = [
-  { match: /(^|\/)fitness(\.html)?$/, type: "text/html", includes: "My Fitness" },
-  { match: /(^|\/)workout(\.html)?$/, type: "text/html", includes: "7-Day Longevity" },
-  { match: /(^|\/)(index\.html)?$/, type: "text/html", includes: "workout.html" },
+  { match: /^fitness(\.html)?$/, type: "text/html", includes: "My Fitness" },
+  { match: /^workout(\.html)?$/, type: "text/html", includes: "7-Day Longevity" },
+  { match: /^(index\.html)?$/, type: "text/html", includes: "workout.html" },
   { match: /\.css$/, type: "text/css" },
   { match: /\.js$/, type: "javascript" },
   { match: /\.webmanifest$/, type: "json" },
@@ -68,20 +70,26 @@ function fallbackDocumentFor(pathname) {
   return route ? route.document : DEFAULT_FALLBACK;
 }
 
-function shellResponseRule(url) {
+function shellPathFor(url) {
+  const scopePath = new URL("./", self.location.href).pathname;
   const { pathname } = new URL(url, self.location.href);
-  return SHELL_RESPONSE_RULES.find(({ match }) => match.test(pathname));
+  return pathname.startsWith(scopePath) ? pathname.slice(scopePath.length) : pathname.replace(/^\//, "");
 }
 
-async function validateShellResponse(url, response) {
-  if (!response.ok || response.type !== "basic") throw new Error(`Failed to fetch ${url}: ${response.status}`);
+function shellResponseRule(url) {
+  const shellPath = shellPathFor(url);
+  return SHELL_RESPONSE_RULES.find(({ match }) => match.test(shellPath));
+}
+
+async function validateShellResponse(url, response, stage) {
+  if (!response.ok || response.type !== "basic") throw new Error(`Failed to ${stage} ${url}: ${response.status}`);
   const rule = shellResponseRule(url);
-  if (!rule) throw new Error(`No shell validation rule for ${url}`);
+  if (!rule) throw new Error(`No shell validation rule to ${stage} ${url}`);
 
   const contentType = response.headers.get("content-type") || "";
-  if (!contentType.includes(rule.type)) throw new Error(`Unexpected content type for ${url}: ${contentType}`);
+  if (!contentType.includes(rule.type)) throw new Error(`Unexpected content type to ${stage} ${url}: ${contentType}`);
   if (rule.includes && !(await response.clone().text()).includes(rule.includes)) {
-    throw new Error(`Unexpected shell content for ${url}`);
+    throw new Error(`Unexpected shell content to ${stage} ${url}`);
   }
 }
 
@@ -105,7 +113,7 @@ function unredirect(response) {
 
 function precache(cache, url) {
   return fetch(url, { cache: "reload" }).then((response) => {
-    return validateShellResponse(url, response).then(() => response);
+    return validateShellResponse(url, response, "precache").then(() => response);
   }).then((response) => {
     return unredirect(response).then((clean) => cache.put(url, clean));
   });
@@ -150,7 +158,7 @@ self.addEventListener("fetch", (event) => {
   // stored for the next load.
   const revalidate = fetch(request)
     .then(async (response) => {
-      await validateShellResponse(cacheUrl, response);
+      await validateShellResponse(cacheUrl, response, "revalidate");
 
       const clean = await unredirect(response);
       const cache = await caches.open(CACHE_NAME);

@@ -240,15 +240,19 @@ test.describe("Workout App", () => {
 
     await page.reload();
     await page.waitForLoadState("networkidle");
-    expect(intercepted).toBeTruthy();
+    await expect.poll(() => intercepted).toBeTruthy();
 
+    await expect.poll(() => page.evaluate(async () => {
+      const cacheName = (await caches.keys()).find((key) => key.startsWith("workout-shell-"));
+      const response = await caches.match("/workout.js", { cacheName });
+      return response ? response.text() : "";
+    })).not.toContain("Captive portal");
     const revalidatedScript = await page.evaluate(async () => {
       const cacheName = (await caches.keys()).find((key) => key.startsWith("workout-shell-"));
       const response = await caches.match("/workout.js", { cacheName });
       return response ? response.text() : "";
     });
     expect(revalidatedScript).toContain("WORKOUT_DATA");
-    expect(revalidatedScript).not.toContain("Captive portal");
   });
 
   test("full page final state screenshot", async ({ page }) => {
