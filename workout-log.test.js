@@ -32,6 +32,10 @@ describe("workout-log.js", () => {
     test("rejects tiny values that are not on the configured step", () => {
       expect(log.validateLogValue("weight", "0.0000000001")).toEqual({ valid: false, value: null });
     });
+
+    test("accepts large values that are on the configured step", () => {
+      expect(log.validateLogValue("weight", "998.5")).toEqual({ valid: true, value: 998.5 });
+    });
   });
 
   describe("loadLog", () => {

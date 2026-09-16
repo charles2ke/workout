@@ -46,7 +46,8 @@ function validateLogValue(field, rawValue) {
   if (value === null || value < spec.min || value > spec.max) return { valid: false, value: null };
 
   const steps = (value - spec.min) / spec.step;
-  const stepTolerance = Number.EPSILON * Math.max(1, Math.abs(steps)) * 8;
+  // Keep tolerance proportional to floating-point precision, not a fixed step-unit gap.
+  const stepTolerance = Number.EPSILON * Math.max(1, Math.abs(value), Math.abs(spec.min)) / spec.step * 8;
   if (Math.abs(steps - Math.round(steps)) > stepTolerance) return { valid: false, value: null };
 
   return { valid: true, value };
