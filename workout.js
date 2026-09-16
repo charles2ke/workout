@@ -475,7 +475,7 @@ tabsNav.addEventListener("keydown", (event) => {
 
   const tabs = Array.from(document.querySelectorAll(".tab-btn"));
   const currentIndex = tabs.indexOf(currentTab);
-  let nextIndex = currentIndex;
+  let nextIndex;
 
   if (event.key === "ArrowRight") {
     nextIndex = (currentIndex + 1) % tabs.length;

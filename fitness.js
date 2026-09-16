@@ -87,7 +87,7 @@ function loadApiSettings() {
   return settings;
 }
 
-let apiSettings = loadApiSettings();
+const apiSettings = loadApiSettings();
 
 function saveApiSetting(providerId, field, value) {
   apiSettings[providerId][field] = String(value || "").trim();
@@ -125,7 +125,7 @@ function loadTokens() {
   return tokens;
 }
 
-let authTokens = loadTokens();
+const authTokens = loadTokens();
 
 function saveTokens(providerId, tokens) {
   authTokens[providerId] = tokens;
@@ -391,7 +391,7 @@ function loadState() {
   return state;
 }
 
-let fitnessState = loadState();
+const fitnessState = loadState();
 
 function saveState() {
   storage.set(FITNESS_STORAGE_KEY, fitnessState);

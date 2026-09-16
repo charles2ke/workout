@@ -194,7 +194,7 @@ describe("workout.js", () => {
       expect(document.getElementById("timer-display").textContent).toMatch(/^\d{2}:\d{2}$/));
 
     test("loads saved profile from localStorage", () => {
-      const { _test } = resetAndLoad({
+      resetAndLoad({
         storageData: {
           profile: { name: "Alice", age: "30", ethnicity: "East Asian", height: "5'5\"", weight: "60" }
         }

@@ -1,0 +1,29 @@
+{
+  "name": "7-Day Longevity & Strength Program",
+  "short_name": "Workout",
+  "description": "A 7-day longevity and strength program with a workout log, rest timer and health dashboard.",
+  "start_url": "./workout.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Workout Program",
+      "url": "./workout.html"
+    },
+    {
+      "name": "My Fitness",
+      "url": "./fitness.html"
+    }
+  ]
+}
