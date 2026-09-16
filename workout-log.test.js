@@ -152,6 +152,29 @@ describe("workout-log.js", () => {
       const log = api.updateEntry({}, "2026-09-16", "wed", "squat", { weight: "20" });
       expect(log["2026-09-16"].entries.squat).toEqual({ done: false, sets: null, reps: null, weight: 20 });
     });
+
+    test("moves a legacy entry to the stable key when updating it", () => {
+      const api = loadLogModule();
+      const log = {
+        "2026-09-16": {
+          dayId: "wed",
+          entries: { "goblet-squats": { done: true, sets: 3, reps: 8, weight: 20 } }
+        }
+      };
+      api.updateEntry(log, "2026-09-16", "wed", "goblet-squat", { reps: "10" }, "goblet-squats");
+      expect(log["2026-09-16"].entries).toEqual({
+        "goblet-squat": { done: true, sets: 3, reps: 10, weight: 20 }
+      });
+    });
+
+    test("removes a cleared legacy entry without leaving a duplicate", () => {
+      const api = loadLogModule();
+      const log = {
+        "2026-09-16": { dayId: "wed", entries: { "goblet-squats": { done: true } } }
+      };
+      api.updateEntry(log, "2026-09-16", "wed", "goblet-squat", { done: false }, "goblet-squats");
+      expect(log).toEqual({});
+    });
   });
 
   describe("clearSession", () => {
@@ -178,6 +201,15 @@ describe("workout-log.js", () => {
 
     test("reports zero for a day with no session", () => {
       expect(api.sessionProgress(log, "2026-09-15", ["squat"])).toEqual({ done: 0, total: 1 });
+    });
+
+    test("counts a completed entry stored under a legacy alias", () => {
+      expect(
+        api.sessionProgress(log, "2026-09-16", [
+          { key: "goblet-squat", legacyKey: "squat" },
+          { key: "press", legacyKey: "overhead-press" }
+        ])
+      ).toEqual({ done: 1, total: 2 });
     });
   });
 

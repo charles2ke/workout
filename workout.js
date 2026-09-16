@@ -281,7 +281,10 @@ const LOG_FIELDS = [
 ];
 
 function exerciseKeysFor(day) {
-  return day.exercises.map((exercise) => exerciseIdentity(exercise));
+  return day.exercises.map((exercise) => ({
+    key: exerciseIdentity(exercise),
+    legacyKey: exerciseKey(exercise.name)
+  }));
 }
 
 function lastPerformanceText(key, todayKey, legacyKey) {
@@ -427,6 +430,7 @@ function renderDays(days) {
       const key = exerciseIdentity(exercise);
       const legacyKey = exercise.id ? exerciseKey(exercise.name) : null;
       card.dataset.exerciseKey = key;
+      card.dataset.legacyExerciseKey = legacyKey || "";
       card.dataset.dayId = day.id;
 
       info.append(exerciseTitle, stats, difficulty, notes, copyButton, createLogControls(key, todayKey, legacyKey));
@@ -609,7 +613,14 @@ workoutContent.addEventListener("change", (event) => {
   const field = control.dataset.logField;
   const patch = field === "done" ? { done: control.checked } : { [field]: control.value };
 
-  workoutLog = updateEntry(workoutLog, getLocalDateKey(), card.dataset.dayId, card.dataset.exerciseKey, patch);
+  workoutLog = updateEntry(
+    workoutLog,
+    getLocalDateKey(),
+    card.dataset.dayId,
+    card.dataset.exerciseKey,
+    patch,
+    card.dataset.legacyExerciseKey
+  );
   refreshLogViews();
 });
 
