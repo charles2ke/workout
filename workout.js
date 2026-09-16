@@ -149,10 +149,12 @@ const Common = (typeof window !== "undefined" && window.WorkoutCommon) || requir
 /* istanbul ignore next -- browser global in the page, require() under Jest */
 const Log = (typeof window !== "undefined" && window.WorkoutLog) || require("./workout-log.js");
 
-const { storage, getLocalDateKey, formatSeconds, createElement, toNumber } = Common;
+const { storage, getLocalDateKey, formatSeconds, createElement } = Common;
 const {
+  LOG_FIELDS,
   exerciseKey,
   exerciseIdentity,
+  validateLogValue,
   loadLog,
   getEntry,
   updateEntry,
@@ -273,12 +275,6 @@ const clearTodayButton = document.getElementById("clear-today-log");
 
 // ===== Workout log =====
 let workoutLog = loadLog();
-
-const LOG_FIELDS = [
-  { field: "sets", label: "Sets", min: 0, max: 99, step: 1 },
-  { field: "reps", label: "Reps", min: 0, max: 999, step: 1 },
-  { field: "weight", label: "kg", min: 0, max: 999, step: 0.5 }
-];
 
 function exerciseIdentitiesFor(day) {
   return day.exercises.map((exercise) => ({
@@ -609,28 +605,6 @@ function renderHistory() {
 function refreshLogViews() {
   renderProgress();
   renderHistory();
-}
-
-// `min`/`max`/`step` only constrain the spinner buttons — a typed "-1" or
-// "20.25" still reaches the change handler — so numeric log values are checked
-// here before anything is persisted. An empty value is valid and clears the
-// field.
-function validateLogValue(field, rawValue) {
-  const spec = LOG_FIELDS.find((candidate) => candidate.field === field);
-  /* istanbul ignore if -- every numeric control is built from LOG_FIELDS */
-  if (!spec) return { valid: false, value: null };
-
-  const raw = String(rawValue).trim();
-  if (raw === "") return { valid: true, value: "" };
-
-  const value = toNumber(raw);
-  if (value === null || value < spec.min || value > spec.max) return { valid: false, value: null };
-
-  // Float-safe step check: 20.25 is rejected for a 0.5 step, 20.5 is not.
-  const steps = (value - spec.min) / spec.step;
-  if (Math.abs(steps - Math.round(steps)) > 1e-9) return { valid: false, value: null };
-
-  return { valid: true, value };
 }
 
 // Delegated so the controls survive re-renders of the day panels.
