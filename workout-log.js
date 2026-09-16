@@ -35,8 +35,9 @@ function exerciseIdentity(exercise) {
   return exercise && exercise.id ? String(exercise.id) : exerciseKey(exercise && exercise.name);
 }
 
-// Express tolerance in step units from the larger input ULP, allowing only
-// parsing/subtraction/division rounding drift rather than real off-step gaps.
+// Express tolerance in step units from a relative epsilon scaled to the larger
+// input magnitude; Math.max's 1 floor still allows sub-unit values to drift by
+// a few representable doubles from parsing, subtraction and division.
 function stepTolerance(value, spec) {
   return (Number.EPSILON * Math.max(1, Math.abs(value), Math.abs(spec.min)) / spec.step) * STEP_TOLERANCE_ULPS;
 }

@@ -38,7 +38,7 @@ describe("workout-log.js", () => {
     });
 
     test("accepts values within floating-point drift of the configured step", () => {
-      expect(log.validateLogValue("weight", "0.5000000000000001")).toEqual({ valid: true, value: 0.5000000000000001 });
+      expect(log.validateLogValue("weight", "1.0000000000000002")).toEqual({ valid: true, value: 1.0000000000000002 });
     });
 
     test("rejects large values that are just off the reps step", () => {
