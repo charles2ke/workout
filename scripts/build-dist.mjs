@@ -39,6 +39,8 @@ const hash = createHash("sha256");
 for (const file of WEB_ASSETS) {
   hash.update(readFileSync(`dist/${file}`));
 }
+// 10 hex chars (40 bits) is ample to avoid accidental collisions between
+// builds while keeping the cache name short and readable.
 const cacheVersion = hash.digest("hex").slice(0, 10);
 const swPath = "dist/sw.js";
 const sw = readFileSync(swPath, "utf8");
