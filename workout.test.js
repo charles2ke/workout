@@ -840,6 +840,60 @@ describe("workout.js", () => {
       });
     });
 
+    test("log controls name the exercise they belong to", () => {
+      resetAndLoad();
+      const card = firstCard();
+      const name = card.querySelector(".exercise-title").textContent;
+      expect(control(card, "done").getAttribute("aria-label")).toBe(`Mark ${name} complete`);
+      expect(control(card, "sets").getAttribute("aria-label")).toBe(`Sets performed for ${name}`);
+      expect(control(card, "reps").getAttribute("aria-label")).toBe(`Reps performed for ${name}`);
+      expect(control(card, "weight").getAttribute("aria-label")).toBe(`kg performed for ${name}`);
+    });
+
+    test.each([
+      ["sets", "-1"],
+      ["sets", "100"],
+      ["sets", "1.5"],
+      ["weight", "20.25"]
+    ])("an out-of-range or step-invalid %s value of %s is rejected instead of persisted", (field, value) => {
+      resetAndLoad();
+      const card = firstCard();
+      const input = control(card, field);
+      input.value = value;
+      dispatchChange(input);
+
+      expect(storedLog()).toBeNull();
+      expect(input.getAttribute("aria-invalid")).toBe("true");
+      expect(input.classList.contains("is-invalid")).toBe(true);
+    });
+
+    test("a non-numeric value is rejected instead of persisted", () => {
+      resetAndLoad();
+      const card = firstCard();
+      const input = control(card, "weight");
+      // Browsers blank a number input that holds garbage, so the value is
+      // forced here to exercise the handler's own parse check.
+      Object.defineProperty(input, "value", { value: "abc", configurable: true });
+      dispatchChange(input);
+
+      expect(storedLog()).toBeNull();
+      expect(input.getAttribute("aria-invalid")).toBe("true");
+    });
+
+    test("a value at the top of the allowed range is accepted and clears the invalid state", () => {
+      resetAndLoad();
+      const card = firstCard();
+      const input = control(card, "weight");
+      input.value = "20.25";
+      dispatchChange(input);
+      input.value = "999";
+      dispatchChange(input);
+
+      expect(storedLog()[todayKey()].entries[card.dataset.exerciseKey].weight).toBe(999);
+      expect(input.getAttribute("aria-invalid")).toBe("false");
+      expect(input.classList.contains("is-invalid")).toBe(false);
+    });
+
     test("clearing the only value removes the day from the log", () => {
       resetAndLoad();
       const card = firstCard();

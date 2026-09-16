@@ -20,6 +20,8 @@ const WEB_ASSETS = [
   "sw.js",
   "sw-register.js",
   "icon.svg",
+  "icon-192.png",
+  "icon-512.png",
   "README.md",
   "LICENSE",
 ];

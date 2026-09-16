@@ -151,8 +151,10 @@ const Log = (typeof window !== "undefined" && window.WorkoutLog) || require("./w
 
 const { storage, getLocalDateKey, formatSeconds, createElement } = Common;
 const {
+  LOG_FIELDS,
   exerciseKey,
   exerciseIdentity,
+  validateLogValue,
   loadLog,
   getEntry,
   updateEntry,
@@ -274,12 +276,6 @@ const clearTodayButton = document.getElementById("clear-today-log");
 // ===== Workout log =====
 let workoutLog = loadLog();
 
-const LOG_FIELDS = [
-  { field: "sets", label: "Sets", min: 0, max: 99, step: 1 },
-  { field: "reps", label: "Reps", min: 0, max: 999, step: 1 },
-  { field: "weight", label: "kg", min: 0, max: 999, step: 0.5 }
-];
-
 function exerciseIdentitiesFor(day) {
   return day.exercises.map((exercise) => ({
     key: exerciseIdentity(exercise),
@@ -295,12 +291,14 @@ function lastPerformanceText(key, todayKey, legacyKey) {
 
 // Builds the per-exercise log controls: a done checkbox, the sets/reps/weight
 // actually performed, and what to beat from the last time it was recorded.
-function createLogControls(key, todayKey, legacyKey) {
+// The exercise name goes into every accessible name so a screen-reader user
+// navigating the form controls knows which exercise they are updating.
+function createLogControls(exerciseName, key, todayKey, legacyKey) {
   const entry = getEntry(workoutLog, todayKey, key, legacyKey);
 
   const checkbox = createElement("input", {
     className: "log-check",
-    attrs: { type: "checkbox", "data-log-field": "done", "aria-label": "Mark exercise complete" }
+    attrs: { type: "checkbox", "data-log-field": "done", "aria-label": `Mark ${exerciseName} complete` }
   });
   checkbox.checked = entry.done;
 
@@ -314,7 +312,7 @@ function createLogControls(key, todayKey, legacyKey) {
         step: String(step),
         inputmode: "decimal",
         "data-log-field": field,
-        "aria-label": `${label} performed`
+        "aria-label": `${label} performed for ${exerciseName}`
       }
     });
     input.value = entry[field] === null ? "" : String(entry[field]);
@@ -433,7 +431,14 @@ function renderDays(days) {
       card.dataset.legacyExerciseKey = legacyKey || "";
       card.dataset.dayId = day.id;
 
-      info.append(exerciseTitle, stats, difficulty, notes, copyButton, createLogControls(key, todayKey, legacyKey));
+      info.append(
+        exerciseTitle,
+        stats,
+        difficulty,
+        notes,
+        copyButton,
+        createLogControls(exercise.name, key, todayKey, legacyKey)
+      );
       card.append(svgContainer, info);
       grid.appendChild(card);
     });
@@ -611,7 +616,17 @@ workoutContent.addEventListener("change", (event) => {
 
   const card = control.closest(".exercise-card");
   const field = control.dataset.logField;
-  const patch = field === "done" ? { done: control.checked } : { [field]: control.value };
+
+  let patch;
+  if (field === "done") {
+    patch = { done: control.checked };
+  } else {
+    const { valid, value } = validateLogValue(field, control.value);
+    control.classList.toggle("is-invalid", !valid);
+    control.setAttribute("aria-invalid", valid ? "false" : "true");
+    if (!valid) return;
+    patch = { [field]: value };
+  }
 
   workoutLog = updateEntry(
     workoutLog,
