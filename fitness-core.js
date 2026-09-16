@@ -4,6 +4,10 @@
 //
 // Loaded as a plain <script> after common.js; publishes `window.FitnessCore`.
 
+// Wrapped in an IIFE: these files are loaded as plain <script> tags, which share
+// one global scope, so top-level declarations would otherwise collide.
+(function () {
+
 /* istanbul ignore next -- browser global in the page, require() under Jest */
 const { round, toNumber, getLocalDateKey } = (typeof window !== "undefined" && window.WorkoutCommon) || require("./common.js");
 
@@ -330,3 +334,4 @@ if (typeof window !== "undefined") {
 if (typeof module !== "undefined") {
   module.exports = FitnessCore;
 }
+})();

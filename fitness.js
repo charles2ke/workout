@@ -2,6 +2,10 @@
 // The pure data layer (parsing, provider payload adapters, summary maths)
 // lives in fitness-core.js; shared utilities live in common.js.
 
+// Wrapped in an IIFE: these files are loaded as plain <script> tags, which share
+// one global scope, so top-level declarations would otherwise collide.
+(function () {
+
 /* istanbul ignore next -- browser global in the page, require() under Jest */
 const Common = (typeof window !== "undefined" && window.WorkoutCommon) || require("./common.js");
 
@@ -720,3 +724,4 @@ if (typeof module !== "undefined") {
     }
   };
 }
+})();

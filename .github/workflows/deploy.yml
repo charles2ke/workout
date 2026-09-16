@@ -115,6 +115,10 @@ jobs:
               '`01` Initial load · `02` Day tabs · `03` Wednesday workout · `04` Ethnicity dropdown',
               '`05` Ethnicity changed · `06` Profile reset · `07` Notes hidden · `08` Skip link',
               '`09` Timer running · `10` Timer complete · `11` Copy feedback · `12` Saturday view',
+              '`13` Exercise animation · `14` Animation off · `15` Exercise logged · `16` Log cleared',
+              '`17` Progression target · `20` Fitness initial · `21` Google sample · `22` Both sources',
+              '`23` CSV import · `24` Import error · `25` Disconnected · `26` Page navigation',
+              '`27` API settings · `28` Sync error',
             ].join('\n');
 
             // Update or create the comment (keep one sticky comment per PR)

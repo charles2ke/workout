@@ -28,8 +28,18 @@ self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
       .open(CACHE_NAME)
-      // A single missing file must not break the whole install.
-      .then((cache) => Promise.allSettled(APP_SHELL.map((url) => cache.add(url))))
+      // A single missing file must not break the whole install. Redirected
+      // responses are skipped: replaying one for a navigation request makes the
+      // browser abort with a "redirected response" error.
+      .then((cache) =>
+        Promise.allSettled(
+          APP_SHELL.map((url) =>
+            fetch(url, { cache: "reload" }).then((response) =>
+              response.ok && !response.redirected ? cache.put(url, response) : null
+            )
+          )
+        )
+      )
       .then(() => self.skipWaiting())
   );
 });
@@ -56,7 +66,7 @@ self.addEventListener("fetch", (event) => {
 
       return fetch(request)
         .then((response) => {
-          if (response.ok && response.type === "basic") {
+          if (response.ok && !response.redirected && response.type === "basic") {
             const copy = response.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
           }

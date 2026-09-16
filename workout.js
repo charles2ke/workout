@@ -1,4 +1,9 @@
 // ===== Data =====
+
+// Wrapped in an IIFE: these files are loaded as plain <script> tags, which share
+// one global scope, so top-level declarations would otherwise collide.
+(function () {
+
 const WORKOUT_DATA = [
   {
     id: "mon",
@@ -780,3 +785,4 @@ if (typeof module !== "undefined") {
     }
   };
 }
+})();

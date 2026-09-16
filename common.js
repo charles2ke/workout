@@ -4,6 +4,10 @@
 // publishes its API on `window.WorkoutCommon` (and on `module.exports` so Jest
 // can require it directly). There is no bundler: keep it dependency-free.
 
+// Wrapped in an IIFE: these files are loaded as plain <script> tags, which share
+// one global scope, so top-level declarations would otherwise collide.
+(function () {
+
 const storage = {
   get(key, fallback) {
     try {
@@ -108,3 +112,4 @@ if (typeof window !== "undefined") {
 if (typeof module !== "undefined") {
   module.exports = WorkoutCommon;
 }
+})();
