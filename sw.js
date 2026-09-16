@@ -71,10 +71,11 @@ self.addEventListener("fetch", (event) => {
   event.respondWith(
     fetch(request)
       .then(async (response) => {
-        if (response.ok && !response.redirected && response.type === "basic") {
-          const cache = await caches.open(CACHE_NAME);
-          await cache.put(cacheUrl, response.clone());
-        }
+        if (!response.ok || response.redirected || response.type !== "basic") throw new Error("Response not cacheable");
+
+        const copy = response.clone();
+        const cache = await caches.open(CACHE_NAME);
+        await cache.put(cacheUrl, copy);
         return response;
       })
       .catch(() => caches.match(cacheUrl).then((cached) => cached || caches.match("./workout.html")))
