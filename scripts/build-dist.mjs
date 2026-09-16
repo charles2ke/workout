@@ -5,10 +5,20 @@ import { copyFileSync, mkdirSync, rmSync } from "fs";
 
 const WEB_ASSETS = [
   "index.html",
+  "styles.css",
   "workout.html",
+  "workout.css",
   "workout.js",
   "fitness.html",
+  "fitness.css",
   "fitness.js",
+  "common.js",
+  "workout-log.js",
+  "fitness-core.js",
+  "manifest.webmanifest",
+  "sw.js",
+  "sw-register.js",
+  "icon.svg",
   "README.md",
   "LICENSE",
 ];

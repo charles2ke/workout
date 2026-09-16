@@ -544,11 +544,23 @@
 
     <main id="workout-content" aria-live="polite"></main>
 
+    <section class="history-panel" aria-labelledby="history-heading">
+      <div class="history-head">
+        <h2 id="history-heading">Training history</h2>
+        <button type="button" class="button secondary" id="clear-today-log">Clear today&rsquo;s log</button>
+      </div>
+      <p id="streak-display" class="streak" role="status">No streak yet &mdash; tick off an exercise to start one.</p>
+      <ul id="history-list" class="history-list" aria-label="Recent logged sessions"></ul>
+      <p id="history-empty" class="empty-state">Nothing logged yet. Tick &ldquo;Done&rdquo; on an exercise and it will show up here and on the My Fitness dashboard.</p>
+    </section>
+
     <footer>
       <p><strong>Golden Rule:</strong> Keep 1–2 reps in reserve on all compound lifts to protect joints and ensure consistent progress.</p>
     </footer>
   </div>
 
+  <script src="common.js"></script>
+  <script src="workout-log.js"></script>
   <script src="workout.js"></script>
 </body>
 </html>

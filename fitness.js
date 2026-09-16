@@ -1,3 +1,29 @@
+// My Fitness page: OAuth connections, provider syncing, state and rendering.
+// The pure data layer (parsing, provider payload adapters, summary maths)
+// lives in fitness-core.js; shared utilities live in common.js.
+
+/* istanbul ignore next -- browser global in the page, require() under Jest */
+const Common = (typeof window !== "undefined" && window.WorkoutCommon) || require("./common.js");
+
+/* istanbul ignore next -- browser global in the page, require() under Jest */
+const Core = (typeof window !== "undefined" && window.FitnessCore) || require("./fitness-core.js");
+
+/* istanbul ignore next -- browser global in the page, require() under Jest */
+const Log = (typeof window !== "undefined" && window.WorkoutLog) || require("./workout-log.js");
+
+const { storage, formatNumber, createElement } = Common;
+const {
+  normalizeRecord,
+  extractRows,
+  parseFitnessData,
+  sortRecords,
+  mergeByDate,
+  googleBucketToRecord,
+  buildSampleRecords,
+  summarize
+} = Core;
+const { loadLog, logRecords } = Log;
+
 // ===== Storage =====
 const FITNESS_STORAGE_KEY = "fitnessSources";
 const API_SETTINGS_KEY = "fitnessApiSettings";
@@ -8,232 +34,12 @@ const PENDING_AUTH_KEY_PREFIX = "fitnessPendingAuth:";
 const PENDING_AUTH_TTL_MS = 10 * 60 * 1000;
 const MAX_PENDING_AUTH = 5;
 
-const storage = {
-  get(key, fallback) {
-    try {
-      const value = localStorage.getItem(key);
-      return value === null ? fallback : JSON.parse(value);
-    } catch {
-      return fallback;
-    }
-  },
-  set(key, value) {
-    try {
-      localStorage.setItem(key, JSON.stringify(value));
-      return true;
-    } catch {
-      return false;
-    }
-  },
-  remove(key) {
-    try {
-      localStorage.removeItem(key);
-      return true;
-    } catch {
-      return false;
-    }
-  }
-};
-
 const PROVIDERS = {
   google: { id: "google", name: "Google Health" },
   garmin: { id: "garmin", name: "Garmin" }
 };
 
-// ===== Parsing helpers =====
-const FIELD_ALIASES = {
-  date: ["date", "day", "calendardate", "summarydate", "starttime", "startdate", "timestamp"],
-  steps: ["steps", "totalsteps", "stepcount", "dailysteps"],
-  restingHeartRate: ["restingheartrate", "restinghr", "resting_heart_rate", "restingheartrateinbeatsperminute"],
-  sleepHours: ["sleephours", "sleep", "hoursofsleep"],
-  sleepMinutes: ["sleepminutes", "totalsleepminutes"],
-  sleepSeconds: ["sleepseconds", "sleepdurationinseconds", "totalsleepseconds", "sleeptimeinseconds"],
-  activeCalories: ["activecalories", "activekilocalories", "activecaloriesburned", "calories", "caloriesburned"],
-  vo2Max: ["vo2max", "vo2maxvalue", "vo2"]
-};
-
-function normalizeKey(key) {
-  return String(key).toLowerCase().replace(/[\s_-]/g, "");
-}
-
-function pickField(record, aliases) {
-  for (const [key, value] of Object.entries(record)) {
-    if (aliases.includes(normalizeKey(key))) return value;
-  }
-  return undefined;
-}
-
-function toNumber(value) {
-  if (value === undefined || value === null || value === "") return null;
-  const parsed = Number(String(value).replace(/,/g, ""));
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-// Formats a Date as YYYY-MM-DD using the local calendar day to avoid UTC/local
-// off-by-one keys when callers are working with local-calendar dates.
-function toLocalDateKey(date) {
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${date.getFullYear()}-${month}-${day}`;
-}
-
-function toDateKey(value) {
-  if (value === undefined || value === null || value === "") return null;
-  const text = String(value).trim();
-  const isoMatch = text.match(/^(\d{4}-\d{2}-\d{2})/);
-  if (isoMatch) return isoMatch[1];
-
-  const parsed = new Date(Number.isFinite(Number(text)) ? Number(text) : text);
-  if (Number.isNaN(parsed.getTime())) return null;
-  return toLocalDateKey(parsed);
-}
-
-function normalizeRecord(raw) {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
-
-  const date = toDateKey(pickField(raw, FIELD_ALIASES.date));
-  if (!date) return null;
-
-  const sleepHours = toNumber(pickField(raw, FIELD_ALIASES.sleepHours));
-  const sleepMinutes = toNumber(pickField(raw, FIELD_ALIASES.sleepMinutes));
-  const sleepSeconds = toNumber(pickField(raw, FIELD_ALIASES.sleepSeconds));
-
-  let sleep = sleepHours;
-  if (sleep === null && sleepMinutes !== null) sleep = sleepMinutes / 60;
-  if (sleep === null && sleepSeconds !== null) sleep = sleepSeconds / 3600;
-
-  return {
-    date,
-    steps: toNumber(pickField(raw, FIELD_ALIASES.steps)),
-    restingHeartRate: toNumber(pickField(raw, FIELD_ALIASES.restingHeartRate)),
-    sleepHours: sleep === null ? null : Math.round(sleep * 10) / 10,
-    activeCalories: toNumber(pickField(raw, FIELD_ALIASES.activeCalories)),
-    vo2Max: toNumber(pickField(raw, FIELD_ALIASES.vo2Max))
-  };
-}
-
-function splitCsvRows(text) {
-  const rows = [];
-  let cells = [];
-  let current = "";
-  let quoted = false;
-  let cellQuoted = false;
-  let rowHasValue = false;
-
-  const pushCell = () => {
-    cells.push(cellQuoted ? current : current.trim());
-    current = "";
-    cellQuoted = false;
-  };
-
-  const pushRow = () => {
-    pushCell();
-    if (rowHasValue) rows.push(cells);
-    cells = [];
-    rowHasValue = false;
-  };
-
-  const normalized = String(text).replace(/\r\n?/g, "\n");
-  for (let index = 0; index < normalized.length; index += 1) {
-    const char = normalized[index];
-    if (quoted) {
-      if (char === '"' && normalized[index + 1] === '"') {
-        current += '"';
-        index += 1;
-      } else if (char === '"') {
-        quoted = false;
-      } else {
-        current += char;
-      }
-    } else if (char === '"') {
-      quoted = true;
-      cellQuoted = true;
-      rowHasValue = true;
-    } else if (char === ",") {
-      rowHasValue = true;
-      pushCell();
-    } else if (char === "\n") {
-      pushRow();
-    } else {
-      current += char;
-      if (char.trim() !== "") rowHasValue = true;
-    }
-  }
-
-  pushRow();
-  return rows;
-}
-
-function parseCsv(text) {
-  const rows = splitCsvRows(text);
-  if (rows.length < 2) return [];
-
-  const headers = rows[0];
-  return rows.slice(1).map((cells) => {
-    const row = {};
-    headers.forEach((header, index) => {
-      row[header] = cells[index] === undefined ? "" : cells[index];
-    });
-    return row;
-  });
-}
-
-function extractRows(parsed) {
-  if (Array.isArray(parsed)) return parsed;
-  const arrayValue = Object.values(Object(parsed)).find((value) => Array.isArray(value));
-  return arrayValue || [];
-}
-
-function parseFitnessData(text) {
-  const trimmed = String(text || "").trim();
-  if (!trimmed) throw new Error("The file is empty.");
-
-  let rows;
-  if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
-    let parsed;
-    try {
-      parsed = JSON.parse(trimmed);
-    } catch {
-      throw new Error("Could not read the file as JSON.");
-    }
-    rows = extractRows(parsed);
-  } else {
-    rows = parseCsv(trimmed);
-  }
-
-  const records = rows.map(normalizeRecord).filter(Boolean);
-  if (records.length === 0) throw new Error("No dated fitness records were found in the file.");
-
-  return sortRecords(records);
-}
-
-function sortRecords(records) {
-  return [...records].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
-}
-
-function mergeByDate(records) {
-  const byDate = new Map();
-
-  for (const record of records) {
-    const existing = byDate.get(record.date);
-    if (!existing) {
-      byDate.set(record.date, { ...record });
-      continue;
-    }
-    for (const [key, value] of Object.entries(record)) {
-      if (key === "date" || value === null) continue;
-      if (existing[key] === null || existing[key] === undefined) existing[key] = value;
-    }
-  }
-
-  return sortRecords([...byDate.values()]);
-}
-
-function round(value, decimals = 0) {
-  if (typeof value !== "number" || !Number.isFinite(value)) return null;
-  const factor = 10 ** decimals;
-  return Math.round(value * factor) / factor;
-}
+const WORKOUT_LOG_SOURCE = "Workout log";
 
 // ===== Live API connections (OAuth 2.0 + PKCE) =====
 // Both providers are contacted straight from the browser: no server, no secrets
@@ -505,67 +311,6 @@ const GOOGLE_AGGREGATE_TYPES = [
   "com.google.sleep.segment"
 ];
 
-// Google sleep segment values: 1 = awake, 3 = out of bed.
-const GOOGLE_NON_SLEEP_STAGES = [1, 3];
-
-function datasetPoints(datasets, index) {
-  const dataset = Array.isArray(datasets) ? datasets[index] : null;
-  return dataset && Array.isArray(dataset.point) ? dataset.point : [];
-}
-
-function pointValue(point, index = 0) {
-  const value = Array.isArray(point.value) ? point.value[index] : null;
-  if (!value) return null;
-  if (typeof value.intVal === "number") return value.intVal;
-  if (typeof value.fpVal === "number") return value.fpVal;
-  return null;
-}
-
-function sumPointValues(points, index = 0) {
-  let total = null;
-  for (const point of points) {
-    const value = pointValue(point, index);
-    if (value === null) continue;
-    total = (total === null ? 0 : total) + value;
-  }
-  return total;
-}
-
-function sleepHoursFromPoints(points) {
-  let seconds = null;
-
-  for (const point of points) {
-    const stage = pointValue(point);
-    if (stage === null || GOOGLE_NON_SLEEP_STAGES.includes(stage)) continue;
-    const start = Number(point.startTimeNanos);
-    const end = Number(point.endTimeNanos);
-    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) continue;
-    seconds = (seconds === null ? 0 : seconds) + (end - start) / 1e9;
-  }
-
-  return seconds === null ? null : round(seconds / 3600, 1);
-}
-
-function googleBucketToRecord(bucket) {
-  const date = toDateKey(bucket.startTimeMillis);
-  if (!date) return null;
-
-  const datasets = bucket.dataset;
-  const heartPoints = datasetPoints(datasets, 2);
-  // Aggregated heart-rate points are [average, max, min]; the daily minimum is
-  // the closest stand-in Google Fit offers for resting heart rate.
-  const restingHeartRate = heartPoints.length === 0 ? null : pointValue(heartPoints[0], 2);
-
-  return {
-    date,
-    steps: round(sumPointValues(datasetPoints(datasets, 0))),
-    restingHeartRate: round(restingHeartRate),
-    sleepHours: sleepHoursFromPoints(datasetPoints(datasets, 3)),
-    activeCalories: round(sumPointValues(datasetPoints(datasets, 1))),
-    vo2Max: null
-  };
-}
-
 async function fetchGoogleRecords(accessToken, now = Date.now()) {
   const config = providerConfig("google");
   const payload = await apiFetch(`${config.apiBase}/fitness/v1/users/me/dataset:aggregate`, accessToken, {
@@ -617,62 +362,6 @@ async function syncProvider(providerId) {
   const records = await fetchProviderRecords(providerId, accessToken);
   if (records.length === 0) throw new Error("the API returned no daily records.");
   connectProvider(providerId, records, `${PROVIDERS[providerId].name} API`);
-}
-
-// ===== Sample data =====
-function buildSampleRecords(providerId, today = new Date()) {
-  const isGarmin = providerId === "garmin";
-  const records = [];
-
-  for (let offset = 0; offset < 7; offset += 1) {
-    const date = new Date(today.getTime());
-    date.setDate(date.getDate() - offset);
-    const wobble = (offset % 3) - 1;
-
-    records.push({
-      date: toLocalDateKey(date),
-      steps: (isGarmin ? 9200 : 8400) + wobble * 850,
-      restingHeartRate: (isGarmin ? 54 : 56) + wobble,
-      sleepHours: Math.round(((isGarmin ? 7.2 : 7.0) + wobble * 0.4) * 10) / 10,
-      activeCalories: (isGarmin ? 640 : 590) + wobble * 60,
-      vo2Max: isGarmin ? 46 : null
-    });
-  }
-
-  return sortRecords(records);
-}
-
-// ===== Summary =====
-function average(values) {
-  if (values.length === 0) return null;
-  const total = values.reduce((sum, value) => sum + value, 0);
-  return total / values.length;
-}
-
-function collect(records, field) {
-  return records.map((record) => record[field]).filter((value) => typeof value === "number");
-}
-
-function summarize(records) {
-  const days = new Set(records.map((record) => record.date)).size;
-  const latestVo2Record = sortRecords(records).find((record) => typeof record.vo2Max === "number");
-
-  return {
-    days,
-    avgSteps: average(collect(records, "steps")),
-    avgRestingHeartRate: average(collect(records, "restingHeartRate")),
-    avgSleepHours: average(collect(records, "sleepHours")),
-    totalActiveCalories: collect(records, "activeCalories").reduce((sum, value) => sum + value, 0),
-    latestVo2Max: latestVo2Record ? latestVo2Record.vo2Max : null
-  };
-}
-
-function formatNumber(value, decimals = 0) {
-  if (typeof value !== "number" || !Number.isFinite(value)) return "—";
-  return value.toLocaleString(undefined, {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals
-  });
 }
 
 // ===== State =====
@@ -732,6 +421,11 @@ function mergedRecords(state = fitnessState) {
     for (const record of provider.records) {
       all.push({ ...record, source: PROVIDERS[providerId].name });
     }
+  }
+  // Sessions logged on the workout page join the same table so training load
+  // sits next to steps, sleep and VO2 max.
+  for (const record of logRecords(loadLog())) {
+    all.push({ ...record, source: WORKOUT_LOG_SOURCE });
   }
   return sortRecords(all);
 }
@@ -798,28 +492,23 @@ function renderSummary(records) {
     { label: "Avg resting HR", value: formatNumber(summary.avgRestingHeartRate), unit: "bpm" },
     { label: "Avg sleep", value: formatNumber(summary.avgSleepHours, 1), unit: "hours" },
     { label: "Active calories", value: formatNumber(summary.totalActiveCalories), unit: "kcal total" },
-    { label: "VO2 max", value: formatNumber(summary.latestVo2Max, 1), unit: "latest" }
+    { label: "VO2 max", value: formatNumber(summary.latestVo2Max, 1), unit: "latest" },
+    { label: "Workouts logged", value: formatNumber(summary.workoutDays), unit: "days trained" },
+    { label: "Exercises done", value: formatNumber(summary.exercisesCompleted), unit: "total logged" }
   ];
 
   elements.summaryGrid.textContent = "";
   for (const card of cards) {
-    const article = document.createElement("article");
-    article.className = "metric-card";
-
-    const label = document.createElement("p");
-    label.className = "metric-label";
-    label.textContent = card.label;
-
-    const value = document.createElement("p");
-    value.className = "metric-value";
-    value.textContent = card.value;
-
-    const unit = document.createElement("p");
-    unit.className = "metric-unit";
-    unit.textContent = card.unit;
-
-    article.append(label, value, unit);
-    elements.summaryGrid.append(article);
+    elements.summaryGrid.append(
+      createElement("article", {
+        className: "metric-card",
+        children: [
+          createElement("p", { className: "metric-label", text: card.label }),
+          createElement("p", { className: "metric-value", text: card.value }),
+          createElement("p", { className: "metric-unit", text: card.unit })
+        ]
+      })
+    );
   }
 }
 
@@ -831,7 +520,7 @@ function renderRecords(records) {
   elements.recordsTable.hidden = !hasRecords;
 
   for (const record of records.slice(0, 30)) {
-    const row = document.createElement("tr");
+    const row = createElement("tr");
     const cells = [
       record.date,
       record.source,
@@ -839,13 +528,12 @@ function renderRecords(records) {
       formatNumber(record.restingHeartRate),
       formatNumber(record.sleepHours, 1),
       formatNumber(record.activeCalories),
-      formatNumber(record.vo2Max, 1)
+      formatNumber(record.vo2Max, 1),
+      formatNumber(record.exercisesCompleted)
     ];
 
     for (const cellValue of cells) {
-      const cell = document.createElement("td");
-      cell.textContent = cellValue;
-      row.append(cell);
+      row.append(createElement("td", { text: cellValue }));
     }
 
     elements.recordsBody.append(row);
@@ -993,23 +681,15 @@ initFitnessPage();
 if (typeof module !== "undefined") {
   module.exports = {
     _test: {
-      parseCsv,
-      parseFitnessData,
-      normalizeRecord,
-      toDateKey,
-      toLocalDateKey,
-      toNumber,
-      summarize,
-      formatNumber,
-      buildSampleRecords,
-      sortRecords,
+      ...Common,
+      ...Core,
+      // fitness.js historically exported the date helper under this name.
+      toLocalDateKey: Common.getLocalDateKey,
       mergedRecords,
       loadState,
       connectProvider,
       disconnectProvider,
       render,
-      mergeByDate,
-      round,
       loadApiSettings,
       saveApiSetting,
       providerConfig,
@@ -1025,7 +705,6 @@ if (typeof module !== "undefined") {
       exchangeCode,
       ensureAccessToken,
       apiFetch,
-      googleBucketToRecord,
       fetchGoogleRecords,
       fetchGarminRecords,
       syncProvider,
@@ -1036,7 +715,8 @@ if (typeof module !== "undefined") {
       AUTH_TOKENS_KEY,
       PENDING_AUTH_KEY_PREFIX,
       PENDING_AUTH_TTL_MS,
-      MAX_PENDING_AUTH
+      MAX_PENDING_AUTH,
+      WORKOUT_LOG_SOURCE
     }
   };
 }

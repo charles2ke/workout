@@ -764,4 +764,162 @@ describe("workout.js", () => {
       expect(navigator.clipboard.writeText).not.toHaveBeenCalled();
     });
   });
+
+  // =========================================================================
+  // Workout log, progression and history
+  // =========================================================================
+  describe("Workout log", () => {
+    const todayKey = () => {
+      const now = new Date();
+      return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    };
+    const shift = (days) => {
+      const date = new Date();
+      date.setDate(date.getDate() + days);
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+    };
+    const firstCard = () => document.querySelector(".day-section.active .exercise-card");
+    const control = (card, field) => card.querySelector(`[data-log-field="${field}"]`);
+    const storedLog = () => JSON.parse(localStorage.getItem("workoutLog") || "null");
+
+    test("every exercise card renders log controls", () => {
+      resetAndLoad();
+      const card = firstCard();
+      expect(card.dataset.exerciseKey).toBeTruthy();
+      expect(card.dataset.dayId).toBeTruthy();
+      expect(control(card, "done").checked).toBe(false);
+      expect(control(card, "sets").value).toBe("");
+      expect(control(card, "reps").value).toBe("");
+      expect(control(card, "weight").value).toBe("");
+    });
+
+    test("ticking done persists the entry and updates progress and history", () => {
+      resetAndLoad();
+      const card = firstCard();
+      const checkbox = control(card, "done");
+      checkbox.checked = true;
+      dispatchChange(checkbox);
+
+      const log = storedLog();
+      expect(log[todayKey()].entries[card.dataset.exerciseKey].done).toBe(true);
+      expect(log[todayKey()].dayId).toBe(card.dataset.dayId);
+
+      const progress = document.getElementById(`progress-${card.dataset.dayId}`);
+      expect(progress.textContent).toMatch(/^Today: 1 of \d+ exercise\(s\) complete$/);
+      expect(document.getElementById("streak-display").textContent).toBe("Current streak: 1 day(s) in a row.");
+      expect(document.getElementById("history-list").children).toHaveLength(1);
+      expect(document.getElementById("history-empty").hidden).toBe(true);
+      expect(document.getElementById("clear-today-log").disabled).toBe(false);
+    });
+
+    test("the day header marks a fully completed day", () => {
+      resetAndLoad();
+      const day = document.querySelector(".day-section.active");
+      day.querySelectorAll(".exercise-card").forEach((card) => {
+        const checkbox = control(card, "done");
+        checkbox.checked = true;
+        dispatchChange(checkbox);
+      });
+      const progress = document.getElementById(`progress-${firstCard().dataset.dayId}`);
+      expect(progress.classList.contains("complete")).toBe(true);
+    });
+
+    test("sets, reps and weight are recorded", () => {
+      resetAndLoad();
+      const card = firstCard();
+      for (const [field, value] of [["sets", "3"], ["reps", "8"], ["weight", "20.5"]]) {
+        const input = control(card, field);
+        input.value = value;
+        dispatchChange(input);
+      }
+      expect(storedLog()[todayKey()].entries[card.dataset.exerciseKey]).toEqual({
+        done: false,
+        sets: 3,
+        reps: 8,
+        weight: 20.5
+      });
+    });
+
+    test("clearing the only value removes the day from the log", () => {
+      resetAndLoad();
+      const card = firstCard();
+      const input = control(card, "sets");
+      input.value = "3";
+      dispatchChange(input);
+      input.value = "";
+      dispatchChange(input);
+      expect(storedLog()).toEqual({});
+      expect(document.getElementById("clear-today-log").disabled).toBe(true);
+    });
+
+    test("changes on non-log controls inside the content area are ignored", () => {
+      resetAndLoad();
+      dispatchChange(document.querySelector(".day-section.active .exercise-title"));
+      expect(storedLog()).toBeNull();
+    });
+
+    test("without history the card invites a baseline", () => {
+      resetAndLoad();
+      expect(firstCard().querySelector(".log-last").textContent).toBe(
+        "No previous entry yet — today sets the baseline."
+      );
+    });
+
+    test("a previous session is surfaced as the target to beat", () => {
+      const api = resetAndLoad();
+      const key = api._test.exerciseKey(api._test.WORKOUT_DATA[0].exercises[0].name);
+      const previous = shift(-7);
+      resetAndLoad({
+        storageData: {
+          selectedDay: { dayId: api._test.WORKOUT_DATA[0].id, dateKey: todayKey() },
+          workoutLog: { [previous]: { dayId: "mon", entries: { [key]: { done: true, sets: 3, reps: 8, weight: 20 } } } }
+        }
+      });
+      const card = document.querySelector(`[data-exercise-key="${key}"]`);
+      expect(card.querySelector(".log-last").textContent).toBe(`Last time (${previous}): 3×8 @ 20 kg`);
+    });
+
+    test("saved entries repopulate the controls on load", () => {
+      const api = resetAndLoad();
+      const day = api._test.WORKOUT_DATA[0];
+      const key = api._test.exerciseKey(day.exercises[0].name);
+      resetAndLoad({
+        storageData: {
+          selectedDay: { dayId: day.id, dateKey: todayKey() },
+          workoutLog: { [todayKey()]: { dayId: day.id, entries: { [key]: { done: true, sets: 4, reps: 6, weight: 30 } } } }
+        }
+      });
+      const card = document.querySelector(`[data-exercise-key="${key}"]`);
+      expect(control(card, "done").checked).toBe(true);
+      expect(control(card, "sets").value).toBe("4");
+      expect(control(card, "reps").value).toBe("6");
+      expect(control(card, "weight").value).toBe("30");
+    });
+
+    test("Clear today's log wipes the session and re-renders the cards", () => {
+      resetAndLoad();
+      const card = firstCard();
+      const checkbox = control(card, "done");
+      checkbox.checked = true;
+      dispatchChange(checkbox);
+
+      document.getElementById("clear-today-log").click();
+
+      expect(storedLog()).toEqual({});
+      expect(control(firstCard(), "done").checked).toBe(false);
+      expect(document.getElementById("history-list").children).toHaveLength(0);
+      expect(document.getElementById("history-empty").hidden).toBe(false);
+      expect(document.getElementById("streak-display").textContent).toBe(
+        "No streak yet — tick off an exercise to start one."
+      );
+      expect(document.querySelector(".day-section.active").id).toBe(`panel-${card.dataset.dayId}`);
+    });
+
+    test("history falls back to a generic title for an unknown day id", () => {
+      resetAndLoad({
+        storageData: { workoutLog: { [todayKey()]: { dayId: "xxx", entries: { squat: { done: true } } } } }
+      });
+      expect(document.getElementById("history-list").firstElementChild.textContent).toContain("Workout");
+    });
+  });
 });
