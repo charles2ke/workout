@@ -1,7 +1,8 @@
 // Service worker for offline use in the gym.
 //
-// The app shell is precached on install and refreshed network-first with a
-// cache fallback for offline use. Anything else (provider API calls) goes
+// The app shell is precached on install and then served cache-first, with a
+// background refresh that keeps the cached copy up to date. Anything else
+// (provider API calls) goes
 // straight to the network and is never cached — health data and OAuth
 // responses must not be stored by the worker.
 
@@ -96,25 +97,30 @@ self.addEventListener("fetch", (event) => {
   if (!APP_SHELL_URLS.has(cacheUrl)) return;
 
   event.respondWith(
-    fetch(request)
-      .then(async (response) => {
+    caches.match(cacheUrl).then((cached) => {
+      const fromNetwork = fetch(request).then(async (response) => {
         if (!response.ok || response.type !== "basic") throw new Error("Response not cacheable");
 
         const clean = await unredirect(response);
-        const copy = clean.clone();
         const cache = await caches.open(CACHE_NAME);
-        await cache.put(cacheUrl, copy);
+        await cache.put(cacheUrl, clean.clone());
         return clean;
-      })
-      .catch(() =>
-        caches.match(cacheUrl).then((cached) => {
-          if (cached) return cached;
-          // Only navigations get a generic HTML fallback. Falling back to
-          // workout.html for a missing script/stylesheet/manifest would make
-          // the browser try to parse HTML as that asset and fail to render.
-          if (request.mode === "navigate") return caches.match("./workout.html");
-          return undefined;
-        })
-      )
+      });
+
+      // Cache-first: serve the precached shell immediately and refresh it in
+      // the background so the next load picks up any deployed change.
+      if (cached) {
+        event.waitUntil(fromNetwork.catch(() => undefined));
+        return cached;
+      }
+
+      return fromNetwork.catch(() => {
+        // Only navigations get a generic HTML fallback. Falling back to
+        // workout.html for a missing script/stylesheet/manifest would make
+        // the browser try to parse HTML as that asset and fail to render.
+        if (request.mode === "navigate") return caches.match("./workout.html");
+        return undefined;
+      });
+    })
   );
 });
