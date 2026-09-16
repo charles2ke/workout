@@ -64,17 +64,18 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
 
   const url = new URL(request.url);
-  if (!APP_SHELL_URLS.has(`${url.origin}${url.pathname}`)) return;
+  const cacheUrl = `${url.origin}${url.pathname}`;
+  if (!APP_SHELL_URLS.has(cacheUrl)) return;
 
   event.respondWith(
-    caches.match(request).then((cached) => {
+    caches.match(cacheUrl).then((cached) => {
       if (cached) return cached;
 
       return fetch(request)
         .then((response) => {
           if (response.ok && !response.redirected && response.type === "basic") {
             const copy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+            caches.open(CACHE_NAME).then((cache) => cache.put(cacheUrl, copy));
           }
           return response;
         })
