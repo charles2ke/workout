@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Workout program icon">
+  <title>Workout program icon</title>
+  <rect width="512" height="512" rx="96" fill="#0f172a"/>
+  <g stroke="#7dd3fc" stroke-width="26" stroke-linecap="round" fill="none">
+    <line x1="150" y1="256" x2="362" y2="256"/>
+    <line x1="120" y1="205" x2="120" y2="307"/>
+    <line x1="392" y1="205" x2="392" y2="307"/>
+  </g>
+  <g fill="#7dd3fc">
+    <rect x="152" y="186" width="42" height="140" rx="16"/>
+    <rect x="318" y="186" width="42" height="140" rx="16"/>
+  </g>
+</svg>

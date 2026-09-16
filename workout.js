@@ -1,4 +1,9 @@
 // ===== Data =====
+
+// Wrapped in an IIFE: these files are loaded as plain <script> tags, which share
+// one global scope, so top-level declarations would otherwise collide.
+(function () {
+
 const WORKOUT_DATA = [
   {
     id: "mon",
@@ -8,6 +13,7 @@ const WORKOUT_DATA = [
     estimatedMinutes: 45,
     exercises: [
       {
+        id: "bench-press-push-ups",
         name: "Bench Press / Push-ups",
         stats: "3 Sets • 8–12 Reps • 90s Rest",
         notes: "Retract shoulder blades; elbows tucked at 45°.",
@@ -16,6 +22,7 @@ const WORKOUT_DATA = [
         illustration: "press"
       },
       {
+        id: "lat-pulldowns-pull-ups",
         name: "Lat Pulldowns / Pull-ups",
         stats: "3 Sets • 8–10 Reps • 90s Rest",
         notes: "Drive with elbows down smoothly to upper chest.",
@@ -33,6 +40,7 @@ const WORKOUT_DATA = [
     estimatedMinutes: 40,
     exercises: [
       {
+        id: "goblet-squats",
         name: "Goblet Squats",
         stats: "3 Sets • 10–12 Reps • 90s Rest",
         notes: "Upright chest, sit between hips, knees out.",
@@ -50,6 +58,7 @@ const WORKOUT_DATA = [
     estimatedMinutes: 30,
     exercises: [
       {
+        id: "zone-2-cardio",
         name: "Zone 2 Cardio",
         stats: "30 Mins • HR 105–120 BPM",
         notes: "Brisk walk, light cycling, or light rowing.",
@@ -67,6 +76,7 @@ const WORKOUT_DATA = [
     estimatedMinutes: 40,
     exercises: [
       {
+        id: "single-arm-db-rows",
         name: "Single-Arm DB Rows",
         stats: "3 Sets • 10 Reps/side • 60s Rest",
         notes: "Pull dumbbell to hip, keeping elbow close.",
@@ -84,6 +94,7 @@ const WORKOUT_DATA = [
     estimatedMinutes: 40,
     exercises: [
       {
+        id: "bulgarian-split-squats",
         name: "Bulgarian Split Squats",
         stats: "3 Sets • 8 Reps/leg • 90s Rest",
         notes: "Keep front foot flat; controls hip stability.",
@@ -101,6 +112,7 @@ const WORKOUT_DATA = [
     estimatedMinutes: 35,
     exercises: [
       {
+        id: "kettlebell-swings",
         name: "Kettlebell Swings",
         stats: "3 Rounds • 12–15 Reps",
         notes: "Explode from the hips; power comes from glutes.",
@@ -118,6 +130,7 @@ const WORKOUT_DATA = [
     estimatedMinutes: 20,
     exercises: [
       {
+        id: "foam-rolling-walk",
         name: "Foam Rolling & Walk",
         stats: "15–20 Mins • Light Pressure",
         notes: "Focus on upper back, quads, and calves.",
@@ -130,36 +143,31 @@ const WORKOUT_DATA = [
 ];
 
 // ===== Utilities =====
-const storage = {
-  get(key, fallback) {
-    try {
-      const value = localStorage.getItem(key);
-      return value === null ? fallback : JSON.parse(value);
-    } catch {
-      return fallback;
-    }
-  },
-  set(key, value) {
-    try {
-      localStorage.setItem(key, JSON.stringify(value));
-      return true;
-    } catch {
-      return false;
-    }
-  }
-};
+/* istanbul ignore next -- browser global in the page, require() under Jest */
+const Common = (typeof window !== "undefined" && window.WorkoutCommon) || require("./common.js");
+
+/* istanbul ignore next -- browser global in the page, require() under Jest */
+const Log = (typeof window !== "undefined" && window.WorkoutLog) || require("./workout-log.js");
+
+const { storage, getLocalDateKey, formatSeconds, createElement } = Common;
+const {
+  exerciseKey,
+  exerciseIdentity,
+  loadLog,
+  getEntry,
+  updateEntry,
+  clearSession,
+  sessionProgress,
+  formatPerformance,
+  lastPerformance,
+  computeStreak,
+  recentSessions
+} = Log;
 
 const DAY_IDS_BY_INDEX = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 
 function getTodayDayId(date = new Date()) {
   return DAY_IDS_BY_INDEX[date.getDay()] || WORKOUT_DATA[0].id;
-}
-
-function getLocalDateKey(date = new Date()) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
 }
 
 function getInitialDayId() {
@@ -177,13 +185,6 @@ function getInitialDayId() {
   }
 
   return todayId;
-}
-
-function formatSeconds(totalSeconds) {
-  const safeSeconds = Math.max(0, Number(totalSeconds) || 0);
-  const minutes = String(Math.floor(safeSeconds / 60)).padStart(2, "0");
-  const seconds = String(safeSeconds % 60).padStart(2, "0");
-  return `${minutes}:${seconds}`;
 }
 
 function createSvg(illustration, titleText) {
@@ -265,6 +266,70 @@ const ethnicityInput = document.getElementById("ethnicity-input");
 const heightInput = document.getElementById("height-input");
 const weightInput = document.getElementById("weight-input");
 const copyAnnouncement = document.getElementById("copy-announcement");
+const streakDisplay = document.getElementById("streak-display");
+const historyList = document.getElementById("history-list");
+const historyEmpty = document.getElementById("history-empty");
+const clearTodayButton = document.getElementById("clear-today-log");
+
+// ===== Workout log =====
+let workoutLog = loadLog();
+
+const LOG_FIELDS = [
+  { field: "sets", label: "Sets", min: 0, max: 99, step: 1 },
+  { field: "reps", label: "Reps", min: 0, max: 999, step: 1 },
+  { field: "weight", label: "kg", min: 0, max: 999, step: 0.5 }
+];
+
+function exerciseIdentitiesFor(day) {
+  return day.exercises.map((exercise) => ({
+    key: exerciseIdentity(exercise),
+    legacyKey: exerciseKey(exercise.name)
+  }));
+}
+
+function lastPerformanceText(key, todayKey, legacyKey) {
+  const previous = lastPerformance(workoutLog, key, todayKey, legacyKey);
+  if (!previous) return "No previous entry yet — today sets the baseline.";
+  return `Last time (${previous.dateKey}): ${formatPerformance(previous.entry)}`;
+}
+
+// Builds the per-exercise log controls: a done checkbox, the sets/reps/weight
+// actually performed, and what to beat from the last time it was recorded.
+function createLogControls(key, todayKey, legacyKey) {
+  const entry = getEntry(workoutLog, todayKey, key, legacyKey);
+
+  const checkbox = createElement("input", {
+    className: "log-check",
+    attrs: { type: "checkbox", "data-log-field": "done", "aria-label": "Mark exercise complete" }
+  });
+  checkbox.checked = entry.done;
+
+  const fields = LOG_FIELDS.map(({ field, label, min, max, step }) => {
+    const input = createElement("input", {
+      className: "log-input",
+      attrs: {
+        type: "number",
+        min: String(min),
+        max: String(max),
+        step: String(step),
+        inputmode: "decimal",
+        "data-log-field": field,
+        "aria-label": `${label} performed`
+      }
+    });
+    input.value = entry[field] === null ? "" : String(entry[field]);
+    return createElement("label", { className: "log-field", text: label, children: [input] });
+  });
+
+  return createElement("div", {
+    className: "exercise-log",
+    children: [
+      createElement("label", { className: "log-done", text: "Done", children: [checkbox] }),
+      createElement("div", { className: "log-fields", children: fields }),
+      createElement("p", { className: "log-last", text: lastPerformanceText(key, todayKey, legacyKey) })
+    ]
+  });
+}
 
 function renderTabs(days) {
   const fragment = document.createDocumentFragment();
@@ -287,6 +352,7 @@ function renderTabs(days) {
 
 function renderDays(days) {
   const fragment = document.createDocumentFragment();
+  const todayKey = getLocalDateKey();
 
   days.forEach((day) => {
     const section = document.createElement("section");
@@ -310,7 +376,12 @@ function renderDays(days) {
     eta.className = "day-time";
     eta.textContent = `Estimated completion time: ${day.estimatedMinutes} mins`;
 
-    header.append(title, desc, eta);
+    const progress = createElement("p", {
+      className: "day-progress",
+      attrs: { id: `progress-${day.id}`, "aria-live": "polite" }
+    });
+
+    header.append(title, desc, eta, progress);
 
     const grid = document.createElement("section");
     grid.className = "exercise-grid";
@@ -356,7 +427,13 @@ function renderDays(days) {
       copyButton.setAttribute("aria-label", `Copy details for ${exercise.name}`);
       copyButton.textContent = "Copy details";
 
-      info.append(exerciseTitle, stats, difficulty, notes, copyButton);
+      const key = exerciseIdentity(exercise);
+      const legacyKey = exercise.id ? exerciseKey(exercise.name) : null;
+      card.dataset.exerciseKey = key;
+      card.dataset.legacyExerciseKey = legacyKey || "";
+      card.dataset.dayId = day.id;
+
+      info.append(exerciseTitle, stats, difficulty, notes, copyButton, createLogControls(key, todayKey, legacyKey));
       card.append(svgContainer, info);
       grid.appendChild(card);
     });
@@ -367,6 +444,8 @@ function renderDays(days) {
 
   workoutContent.replaceChildren(fragment);
 }
+
+let currentDayId = WORKOUT_DATA[0].id;
 
 function activateDay(dayId, focusTab = false) {
   const tabs = Array.from(document.querySelectorAll(".tab-btn"));
@@ -391,6 +470,7 @@ function activateDay(dayId, focusTab = false) {
     panel.hidden = !isActive;
   });
 
+  currentDayId = selectedId;
   storage.set("selectedDay", { dayId: selectedId, dateKey: getLocalDateKey() });
   if (focusTab) {
     selectedTab.focus();
@@ -414,7 +494,7 @@ tabsNav.addEventListener("keydown", (event) => {
 
   const tabs = Array.from(document.querySelectorAll(".tab-btn"));
   const currentIndex = tabs.indexOf(currentTab);
-  let nextIndex = currentIndex;
+  let nextIndex;
 
   if (event.key === "ArrowRight") {
     nextIndex = (currentIndex + 1) % tabs.length;
@@ -475,6 +555,80 @@ workoutContent.addEventListener("click", async (event) => {
     copyBtn.textContent = "Copy failed";
     copyAnnouncement.textContent = "Copy failed. Please try again.";
   }
+});
+
+// ===== Log rendering =====
+function renderProgress() {
+  const todayKey = getLocalDateKey();
+  for (const day of WORKOUT_DATA) {
+    const element = document.getElementById(`progress-${day.id}`);
+    /* istanbul ignore next -- the element is always rendered with its day */
+    if (!element) continue;
+    const { done, total } = sessionProgress(workoutLog, todayKey, exerciseIdentitiesFor(day));
+    element.textContent = `Today: ${done} of ${total} exercise(s) complete`;
+    element.classList.toggle("complete", total > 0 && done === total);
+  }
+}
+
+function dayTitleFor(dayId) {
+  const day = WORKOUT_DATA.find((item) => item.id === dayId);
+  return day ? day.title : "Workout";
+}
+
+function renderHistory() {
+  const streak = computeStreak(workoutLog);
+  streakDisplay.textContent =
+    streak > 0
+      ? `Current streak: ${streak} day(s) in a row.`
+      : "No streak yet — tick off an exercise to start one.";
+
+  const sessions = recentSessions(workoutLog);
+  historyEmpty.hidden = sessions.length > 0;
+
+  historyList.replaceChildren(
+    ...sessions.map((session) =>
+      createElement("li", {
+        className: "history-item",
+        text: `${session.dateKey} · ${dayTitleFor(session.dayId)} · ${session.completed} of ${session.logged} logged exercise(s) complete`
+      })
+    )
+  );
+
+  clearTodayButton.disabled = !workoutLog[getLocalDateKey()];
+}
+
+function refreshLogViews() {
+  renderProgress();
+  renderHistory();
+}
+
+// Delegated so the controls survive re-renders of the day panels.
+workoutContent.addEventListener("change", (event) => {
+  const control = event.target.closest("[data-log-field]");
+  if (!control) {
+    return;
+  }
+
+  const card = control.closest(".exercise-card");
+  const field = control.dataset.logField;
+  const patch = field === "done" ? { done: control.checked } : { [field]: control.value };
+
+  workoutLog = updateEntry(
+    workoutLog,
+    getLocalDateKey(),
+    card.dataset.dayId,
+    card.dataset.exerciseKey,
+    patch,
+    card.dataset.legacyExerciseKey
+  );
+  refreshLogViews();
+});
+
+clearTodayButton.addEventListener("click", () => {
+  workoutLog = clearSession(workoutLog, getLocalDateKey());
+  renderDays(WORKOUT_DATA);
+  activateDay(currentDayId);
+  refreshLogViews();
 });
 
 function applyVisibilityPreferences() {
@@ -623,6 +777,7 @@ function initWorkoutProgram() {
   applyProfilePreferences();
 
   activateDay(getInitialDayId());
+  refreshLogViews();
 
   const savedTimerSeconds = storage.get("timerSeconds", 90);
   restSecondsInput.value = Number(savedTimerSeconds) || 90;
@@ -634,5 +789,21 @@ initWorkoutProgram();
 // ===== Test Exports =====
 /* istanbul ignore next */
 if (typeof module !== "undefined") {
-  module.exports = { _test: { formatSeconds, storage, createSvg, activateDay, getTodayDayId, getLocalDateKey } };
+  module.exports = {
+    _test: {
+      ...Common,
+      ...Log,
+      createSvg,
+      activateDay,
+      getTodayDayId,
+      renderDays,
+      renderProgress,
+      renderHistory,
+      refreshLogViews,
+      lastPerformanceText,
+      dayTitleFor,
+      WORKOUT_DATA
+    }
+  };
 }
+})();

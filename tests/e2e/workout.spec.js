@@ -100,6 +100,96 @@ test.describe("Workout App", () => {
     await page.screenshot({ path: "playwright-screenshots/14-animation-off.png", fullPage: true });
   });
 
+  test("logging an exercise updates progress, streak and history", async ({ page }) => {
+    const card = page.locator(".day-section.active .exercise-card").first();
+    const dayId = await card.getAttribute("data-day-id");
+
+    await card.locator("[data-log-field='done']").check();
+    await card.locator("[data-log-field='sets']").fill("3");
+    await card.locator("[data-log-field='reps']").fill("8");
+    await card.locator("[data-log-field='weight']").fill("20");
+    // Blur so the last field fires its change event.
+    await page.locator("#history-heading").click();
+
+    await expect(page.locator(`#progress-${dayId}`)).toContainText("Today: 1 of");
+    await expect(page.locator("#streak-display")).toContainText("Current streak: 1 day(s)");
+    await expect(page.locator(".history-item")).toHaveCount(1);
+    await expect(page.locator("#history-empty")).toBeHidden();
+    await page.screenshot({ path: "playwright-screenshots/15-exercise-logged.png", fullPage: true });
+
+    const stored = await page.evaluate(() => localStorage.getItem("workoutLog"));
+    expect(stored).toContain('"weight":20');
+  });
+
+  test("clearing today's log resets the cards and history", async ({ page }) => {
+    const card = page.locator(".day-section.active .exercise-card").first();
+    await card.locator("[data-log-field='done']").check();
+    await expect(page.locator(".history-item")).toHaveCount(1);
+
+    await page.locator("#clear-today-log").click();
+
+    await expect(page.locator(".history-item")).toHaveCount(0);
+    await expect(page.locator("#history-empty")).toBeVisible();
+    await expect(page.locator("#clear-today-log")).toBeDisabled();
+    await expect(page.locator(".day-section.active .exercise-card [data-log-field='done']").first()).not.toBeChecked();
+    await page.screenshot({ path: "playwright-screenshots/16-log-cleared.png", fullPage: true });
+  });
+
+  test("a previous session is shown as the target to beat", async ({ page }) => {
+    await page.evaluate(() => {
+      const previous = new Date();
+      previous.setDate(previous.getDate() - 1);
+      const key = `${previous.getFullYear()}-${String(previous.getMonth() + 1).padStart(2, "0")}-${String(previous.getDate()).padStart(2, "0")}`;
+      const card = document.querySelector(".day-section.active .exercise-card");
+      localStorage.setItem(
+        "workoutLog",
+        JSON.stringify({
+          [key]: {
+            dayId: card.dataset.dayId,
+            entries: { [card.dataset.exerciseKey]: { done: true, sets: 3, reps: 8, weight: 20 } }
+          }
+        })
+      );
+    });
+    await page.reload();
+    await page.waitForLoadState("networkidle");
+
+    await expect(page.locator(".day-section.active .log-last").first()).toContainText("Last time");
+    await expect(page.locator(".day-section.active .log-last").first()).toContainText("3×8 @ 20 kg");
+    await page.screenshot({ path: "playwright-screenshots/17-progression-target.png", fullPage: true });
+  });
+
+  test("the page is installable as a PWA", async ({ page }) => {
+    await expect(page.locator('link[rel="manifest"]')).toHaveAttribute("href", "manifest.webmanifest");
+
+    const manifest = await page.request.get("/manifest.webmanifest");
+    expect(manifest.ok()).toBeTruthy();
+    const body = await manifest.json();
+    expect(body.name).toContain("7-Day");
+    expect(body.icons.length).toBeGreaterThan(0);
+
+    const serviceWorker = await page.request.get("/sw.js");
+    expect(serviceWorker.ok()).toBeTruthy();
+  });
+
+  test("an offline launch at the clean URL is served from the cache", async ({ page, context }) => {
+    // The dev server redirects /workout.html to /workout, so an installed app
+    // can be launched at the extensionless URL: it must be precached too.
+    await page.goto("/workout");
+    await page.waitForLoadState("networkidle");
+    await page.evaluate(() => navigator.serviceWorker.ready);
+    await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
+
+    await context.setOffline(true);
+    try {
+      await page.reload();
+      await expect(page.locator("h1")).toContainText("7-Day Longevity");
+      await page.screenshot({ path: "playwright-screenshots/18-offline-clean-url.png", fullPage: true });
+    } finally {
+      await context.setOffline(false);
+    }
+  });
+
   test("full page final state screenshot", async ({ page }) => {
     // Navigate to Saturday for a different view
     await page.locator("#tab-sat").click();

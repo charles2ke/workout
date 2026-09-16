@@ -218,7 +218,9 @@ describe("fitness.js", () => {
         avgRestingHeartRate: 52,
         avgSleepHours: 7.5,
         totalActiveCalories: 1000,
-        latestVo2Max: 47
+        latestVo2Max: 47,
+        workoutDays: 0,
+        exercisesCompleted: 0
       });
     });
 
@@ -229,7 +231,9 @@ describe("fitness.js", () => {
         avgRestingHeartRate: null,
         avgSleepHours: null,
         totalActiveCalories: 0,
-        latestVo2Max: null
+        latestVo2Max: null,
+        workoutDays: 0,
+        exercisesCompleted: 0
       });
     });
   });
@@ -333,11 +337,49 @@ describe("fitness.js", () => {
   // =========================================================================
   // Rendering & interactions
   // =========================================================================
+  describe("workout log integration", () => {
+    test("logged sessions appear as rows and feed the summary", () => {
+      api = resetAndLoad({
+        workoutLog: {
+          "2026-09-16": { dayId: "wed", entries: { squat: { done: true }, row: { done: true } } },
+          "2026-09-15": { dayId: "tue", entries: { squat: { done: false, sets: 3 } } }
+        }
+      })._test;
+
+      const records = api.mergedRecords();
+      expect(records).toEqual([
+        {
+          date: "2026-09-16",
+          steps: null,
+          restingHeartRate: null,
+          sleepHours: null,
+          activeCalories: null,
+          vo2Max: null,
+          exercisesCompleted: 2,
+          source: api.WORKOUT_LOG_SOURCE
+        }
+      ]);
+
+      const summary = api.summarize(records);
+      expect(summary.workoutDays).toBe(1);
+      expect(summary.exercisesCompleted).toBe(2);
+
+      const row = document.getElementById("records-body").firstElementChild;
+      expect(row.children[1].textContent).toBe("Workout log");
+      expect(row.children[7].textContent).toBe("2");
+    });
+
+    test("an empty workout log adds no rows", () => {
+      api = resetAndLoad()._test;
+      expect(api.mergedRecords()).toEqual([]);
+    });
+  });
+
   describe("rendering", () => {
     test("empty state is shown before any import", () => {
       expect(document.getElementById("records-empty").hidden).toBe(false);
       expect(document.getElementById("records-body").children).toHaveLength(0);
-      expect(document.getElementById("summary-grid").children).toHaveLength(6);
+      expect(document.getElementById("summary-grid").children).toHaveLength(8);
       expect(document.getElementById("google-status").textContent).toBe("Not connected.");
     });
 
