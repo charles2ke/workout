@@ -35,18 +35,32 @@ const APP_SHELL_URLS = new Set(
   })
 );
 
+// Replaying a redirected response for a navigation request makes the browser
+// abort with a "redirected response" error, and some static hosts redirect
+// "/page.html" to "/page". Copy the body into a fresh response so the redirect
+// flag is cleared and the response stays usable for navigations.
+function unredirect(response) {
+  if (!response.redirected) return Promise.resolve(response);
+  return response.blob().then(
+    (body) =>
+      new Response(body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: response.headers
+      })
+  );
+}
+
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
       .open(CACHE_NAME)
-      // A single missing file must not break the whole install. Redirected
-      // responses are skipped: replaying one for a navigation request makes the
-      // browser abort with a "redirected response" error.
+      // A single missing file must not break the whole install.
       .then((cache) =>
         Promise.allSettled(
           APP_SHELL.map((url) =>
             fetch(url, { cache: "reload" }).then((response) =>
-              response.ok && !response.redirected ? cache.put(url, response) : null
+              response.ok ? unredirect(response).then((clean) => cache.put(url, clean)) : null
             )
           )
         )
@@ -75,12 +89,13 @@ self.addEventListener("fetch", (event) => {
   event.respondWith(
     fetch(request)
       .then(async (response) => {
-        if (!response.ok || response.redirected || response.type !== "basic") throw new Error("Response not cacheable");
+        if (!response.ok || response.type !== "basic") throw new Error("Response not cacheable");
 
-        const copy = response.clone();
+        const clean = await unredirect(response);
+        const copy = clean.clone();
         const cache = await caches.open(CACHE_NAME);
         await cache.put(cacheUrl, copy);
-        return response;
+        return clean;
       })
       .catch(() =>
         caches.match(cacheUrl).then((cached) => {
