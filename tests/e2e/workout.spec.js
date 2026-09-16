@@ -229,24 +229,26 @@ test.describe("Workout App", () => {
     const cachedScript = await readCachedScript();
     expect(cachedScript).toContain("WORKOUT_DATA");
 
-    let revalidationResponse;
+    let revalidationRequests = 0;
+    let fulfillPromise = Promise.resolve();
     await context.route("**/workout.js", (route) => {
-      revalidationResponse = route.fulfill({
+      revalidationRequests += 1;
+      fulfillPromise = route.fulfill({
         status: 200,
         contentType: "text/html",
         body: "<!DOCTYPE html><title>Captive portal</title><p>Sign in to continue</p>"
       });
-      return revalidationResponse;
+      return fulfillPromise;
     });
 
     await page.reload();
     await page.waitForLoadState("networkidle");
-    await expect.poll(() => Boolean(revalidationResponse)).toBeTruthy();
-    await revalidationResponse;
+    await expect.poll(() => revalidationRequests).toBeGreaterThan(0);
+    await fulfillPromise;
 
-    await expect.poll(readCachedScript).not.toContain("Captive portal");
     const revalidatedScript = await readCachedScript();
     expect(revalidatedScript).toContain("WORKOUT_DATA");
+    expect(revalidatedScript).not.toContain("Captive portal");
   });
 
   test("full page final state screenshot", async ({ page }) => {

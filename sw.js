@@ -112,12 +112,11 @@ function unredirect(response) {
   });
 }
 
-function precache(cache, url) {
-  return fetch(url, { cache: "reload" }).then((response) => {
-    return validateShellResponse(url, response, "precache").then(() => response);
-  }).then((response) => {
-    return unredirect(response).then((clean) => cache.put(url, clean));
-  });
+async function precache(cache, url) {
+  const response = await fetch(url, { cache: "reload" });
+  await validateShellResponse(url, response, "precache");
+  const clean = await unredirect(response);
+  await cache.put(url, clean);
 }
 
 self.addEventListener("install", (event) => {
