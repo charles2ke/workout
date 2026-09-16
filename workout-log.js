@@ -35,6 +35,12 @@ function exerciseIdentity(exercise) {
   return exercise && exercise.id ? String(exercise.id) : exerciseKey(exercise && exercise.name);
 }
 
+// Express tolerance in step units from the larger input ULP, allowing only
+// parsing/subtraction/division rounding drift rather than real off-step gaps.
+function stepTolerance(value, spec) {
+  return (Number.EPSILON * Math.max(1, Math.abs(value), Math.abs(spec.min)) / spec.step) * STEP_TOLERANCE_ULPS;
+}
+
 function validateLogValue(field, rawValue) {
   const spec = LOG_FIELDS.find((candidate) => candidate.field === field);
   /* istanbul ignore if -- callers only use fields from LOG_FIELDS */
@@ -47,9 +53,7 @@ function validateLogValue(field, rawValue) {
   if (value === null || value < spec.min || value > spec.max) return { valid: false, value: null };
 
   const steps = (value - spec.min) / spec.step;
-  // Keep tolerance proportional to floating-point precision, not a fixed step-unit gap.
-  const stepTolerance = (Number.EPSILON * Math.max(1, Math.abs(value), Math.abs(spec.min)) / spec.step) * STEP_TOLERANCE_ULPS;
-  if (Math.abs(steps - Math.round(steps)) > stepTolerance) return { valid: false, value: null };
+  if (Math.abs(steps - Math.round(steps)) > stepTolerance(value, spec)) return { valid: false, value: null };
 
   return { valid: true, value };
 }
