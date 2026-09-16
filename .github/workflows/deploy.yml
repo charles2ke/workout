@@ -29,9 +29,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install htmlhint
-        run: npm install -g htmlhint
-
       - name: Lint JavaScript
         run: npm run lint:js
 

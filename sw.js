@@ -1,9 +1,9 @@
 // Service worker for offline use in the gym.
 //
-// The app shell is precached on install and served cache-first, because it is
-// a static site whose assets change only on deploy. Anything else (provider
-// API calls) goes straight to the network and is never cached — health data
-// and OAuth responses must not be stored by the worker.
+// The app shell is precached on install and refreshed network-first with a
+// cache fallback for offline use. Anything else (provider API calls) goes
+// straight to the network and is never cached — health data and OAuth
+// responses must not be stored by the worker.
 
 const CACHE_NAME = "workout-shell-v1";
 
@@ -20,6 +20,7 @@ const APP_SHELL = [
   "./fitness-core.js",
   "./workout.js",
   "./fitness.js",
+  "./sw-register.js",
   "./manifest.webmanifest",
   "./icon.svg"
 ];
@@ -68,18 +69,14 @@ self.addEventListener("fetch", (event) => {
   if (!APP_SHELL_URLS.has(cacheUrl)) return;
 
   event.respondWith(
-    caches.match(cacheUrl).then((cached) => {
-      if (cached) return cached;
-
-      return fetch(request)
-        .then((response) => {
-          if (response.ok && !response.redirected && response.type === "basic") {
-            const copy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(cacheUrl, copy));
-          }
-          return response;
-        })
-        .catch(() => caches.match("./workout.html"));
-    })
+    fetch(request)
+      .then(async (response) => {
+        if (response.ok && !response.redirected && response.type === "basic") {
+          const cache = await caches.open(CACHE_NAME);
+          await cache.put(cacheUrl, response.clone());
+        }
+        return response;
+      })
+      .catch(() => caches.match(cacheUrl).then((cached) => cached || caches.match("./workout.html")))
   );
 });

@@ -20,6 +20,7 @@
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.62.1",
     "eslint": "^10.10.0",
+    "htmlhint": "1.9.2",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
     "serve": "^14.2.4"
