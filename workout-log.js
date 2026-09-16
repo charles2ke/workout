@@ -17,6 +17,7 @@ const LOG_FIELDS = [
   { field: "reps", label: "Reps", min: 0, max: 999, step: 1 },
   { field: "weight", label: "kg", min: 0, max: 999, step: 0.5 }
 ];
+const STEP_TOLERANCE_ULPS = 8;
 
 // Fallback identity for exercises that predate the `id` field: a slug of the
 // display name. Kept only as a migration alias — see exerciseIdentity below.
@@ -47,7 +48,7 @@ function validateLogValue(field, rawValue) {
 
   const steps = (value - spec.min) / spec.step;
   // Keep tolerance proportional to floating-point precision, not a fixed step-unit gap.
-  const stepTolerance = Number.EPSILON * Math.max(1, Math.abs(value), Math.abs(spec.min)) / spec.step * 8;
+  const stepTolerance = (Number.EPSILON * Math.max(1, Math.abs(value), Math.abs(spec.min)) / spec.step) * STEP_TOLERANCE_ULPS;
   if (Math.abs(steps - Math.round(steps)) > stepTolerance) return { valid: false, value: null };
 
   return { valid: true, value };

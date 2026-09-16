@@ -36,6 +36,10 @@ describe("workout-log.js", () => {
     test("accepts large values that are on the configured step", () => {
       expect(log.validateLogValue("weight", "998.5")).toEqual({ valid: true, value: 998.5 });
     });
+
+    test("rejects large values that are just off another field's configured step", () => {
+      expect(log.validateLogValue("reps", "998.4999")).toEqual({ valid: false, value: null });
+    });
   });
 
   describe("loadLog", () => {
