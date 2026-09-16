@@ -17,7 +17,7 @@ const LOG_FIELDS = [
   { field: "reps", label: "Reps", min: 0, max: 999, step: 1 },
   { field: "weight", label: "kg", min: 0, max: 999, step: 0.5 }
 ];
-const STEP_TOLERANCE_ULPS = 8;
+const STEP_TOLERANCE_ULPS = 8; // Allows parsing, subtraction and division rounding, but not real off-step gaps.
 
 // Fallback identity for exercises that predate the `id` field: a slug of the
 // display name. Kept only as a migration alias — see exerciseIdentity below.
