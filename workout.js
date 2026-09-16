@@ -280,8 +280,11 @@ const LOG_FIELDS = [
   { field: "weight", label: "kg", min: 0, max: 999, step: 0.5 }
 ];
 
-function exerciseKeysFor(day) {
-  return day.exercises.map((exercise) => exerciseIdentity(exercise));
+function exerciseIdentitiesFor(day) {
+  return day.exercises.map((exercise) => ({
+    key: exerciseIdentity(exercise),
+    legacyKey: exerciseKey(exercise.name)
+  }));
 }
 
 function lastPerformanceText(key, todayKey, legacyKey) {
@@ -427,6 +430,7 @@ function renderDays(days) {
       const key = exerciseIdentity(exercise);
       const legacyKey = exercise.id ? exerciseKey(exercise.name) : null;
       card.dataset.exerciseKey = key;
+      card.dataset.legacyExerciseKey = legacyKey || "";
       card.dataset.dayId = day.id;
 
       info.append(exerciseTitle, stats, difficulty, notes, copyButton, createLogControls(key, todayKey, legacyKey));
@@ -560,7 +564,7 @@ function renderProgress() {
     const element = document.getElementById(`progress-${day.id}`);
     /* istanbul ignore next -- the element is always rendered with its day */
     if (!element) continue;
-    const { done, total } = sessionProgress(workoutLog, todayKey, exerciseKeysFor(day));
+    const { done, total } = sessionProgress(workoutLog, todayKey, exerciseIdentitiesFor(day));
     element.textContent = `Today: ${done} of ${total} exercise(s) complete`;
     element.classList.toggle("complete", total > 0 && done === total);
   }
@@ -609,7 +613,14 @@ workoutContent.addEventListener("change", (event) => {
   const field = control.dataset.logField;
   const patch = field === "done" ? { done: control.checked } : { [field]: control.value };
 
-  workoutLog = updateEntry(workoutLog, getLocalDateKey(), card.dataset.dayId, card.dataset.exerciseKey, patch);
+  workoutLog = updateEntry(
+    workoutLog,
+    getLocalDateKey(),
+    card.dataset.dayId,
+    card.dataset.exerciseKey,
+    patch,
+    card.dataset.legacyExerciseKey
+  );
   refreshLogViews();
 });
 

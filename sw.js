@@ -16,6 +16,11 @@ const APP_SHELL = [
   "./index.html",
   "./workout.html",
   "./fitness.html",
+  // Static hosts (and the `serve` dev server) redirect "/page.html" to the
+  // extensionless "/page", so an installed app can be launched there. Precache
+  // both spellings or an offline launch at the clean URL is never intercepted.
+  "./workout",
+  "./fitness",
   "./styles.css",
   "./workout.css",
   "./fitness.css",
@@ -41,14 +46,16 @@ const APP_SHELL_URLS = new Set(
 // flag is cleared and the response stays usable for navigations.
 function unredirect(response) {
   if (!response.redirected) return Promise.resolve(response);
-  return response.blob().then(
-    (body) =>
-      new Response(body, {
-        status: response.status,
-        statusText: response.statusText,
-        headers: response.headers
-      })
-  );
+  return response.blob().then((body) => {
+    const headers = new Headers(response.headers);
+    headers.delete("content-encoding");
+    headers.delete("content-length");
+    return new Response(body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers
+    });
+  });
 }
 
 self.addEventListener("install", (event) => {
@@ -73,7 +80,7 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))))
+.then((keys) => Promise.all(keys.filter((key) => key.startsWith("workout-shell-") && key !== CACHE_NAME).map((key) => caches.delete(key))))
       .then(() => self.clients.claim())
   );
 });

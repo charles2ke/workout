@@ -67,7 +67,7 @@ module.exports = [
   {
     files: ["sw.js"],
     languageOptions: {
-      globals: { ...browserGlobals, self: "readonly", clients: "readonly", Response: "readonly" }
+      globals: { ...browserGlobals, self: "readonly", clients: "readonly", Headers: "readonly", Response: "readonly" }
     }
   },
   {
