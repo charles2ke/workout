@@ -86,12 +86,11 @@ function getEntry(log, dateKey, key, legacyKey) {
 
 // Applies a partial update and persists. An entry with nothing recorded is
 // dropped so empty days never show up in the history or streak.
-function updateEntry(log, dateKey, dayId, key, patch, legacyKey) {
+function updateEntry(log, dateKey, dayId, key, patch) {
   const session = log[dateKey] || { dayId, entries: {} };
   session.dayId = dayId;
 
-  const merged = sanitizeEntry({ ...getEntry(log, dateKey, key, legacyKey), ...patch });
-  if (legacyKey && legacyKey !== key) delete session.entries[legacyKey];
+  const merged = sanitizeEntry({ ...getEntry(log, dateKey, key), ...patch });
   if (merged) {
     session.entries[key] = merged;
   } else {
@@ -122,11 +121,7 @@ function sessionProgress(log, dateKey, keys) {
   const session = log[dateKey];
   const total = keys.length;
   if (!session) return { done: 0, total };
-  const done = keys.filter((item) => {
-    const key = typeof item === "string" ? item : item.key;
-    const legacyKey = typeof item === "string" ? null : item.legacyKey;
-    return getEntry(log, dateKey, key, legacyKey).done;
-  }).length;
+  const done = keys.filter((key) => session.entries[key] && session.entries[key].done).length;
   return { done, total };
 }
 
