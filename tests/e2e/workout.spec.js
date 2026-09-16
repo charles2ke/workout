@@ -167,6 +167,14 @@ test.describe("Workout App", () => {
     const body = await manifest.json();
     expect(body.name).toContain("7-Day");
     expect(body.icons.length).toBeGreaterThan(0);
+    // Chromium installability needs concrete raster install icons, not just an
+    // SVG with sizes "any", so assert both sizes are declared and served.
+    for (const size of ["192x192", "512x512"]) {
+      const icon = body.icons.find((entry) => entry.sizes === size && entry.type === "image/png");
+      expect(icon, `manifest is missing a ${size} PNG icon`).toBeTruthy();
+      const iconResponse = await page.request.get(icon.src.replace("./", "/"));
+      expect(iconResponse.ok()).toBeTruthy();
+    }
 
     const serviceWorker = await page.request.get("/sw.js");
     expect(serviceWorker.ok()).toBeTruthy();

@@ -31,7 +31,9 @@ const APP_SHELL = [
   "./fitness.js",
   "./sw-register.js",
   "./manifest.webmanifest",
-  "./icon.svg"
+  "./icon.svg",
+  "./icon-192.png",
+  "./icon-512.png"
 ];
 const APP_SHELL_URLS = new Set(
   APP_SHELL.map((path) => {

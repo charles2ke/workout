@@ -77,7 +77,7 @@ common.js          storage, date-key and DOM helpers shared by both pages
 workout-log.js     workout log: entries, progression, streak, history (pure)
 fitness-core.js    parsing, CSV/JSON import, provider adapters, summaries (pure)
 styles.css         shared styles; workout.css / fitness.css are page-specific
-manifest.webmanifest, icon.svg, sw.js, sw-register.js  PWA / offline support
+manifest.webmanifest, icon.svg, icon-192.png, icon-512.png, sw.js, sw-register.js  PWA / offline support
 eslint.config.js, .htmlhintrc, jest.config.js, playwright.config.js  tooling
 scripts/           build-dist.mjs, Android/iOS build helpers
 tests/e2e/         Playwright specs
