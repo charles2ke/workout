@@ -1,7 +1,8 @@
 // Builds the static site into dist/.
 // Used by the CI/deploy, release and mobile build workflows so that every
 // pipeline packages exactly the same set of web assets.
-import { copyFileSync, mkdirSync, rmSync } from "fs";
+import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "fs";
+import { createHash } from "crypto";
 
 const WEB_ASSETS = [
   "index.html",
@@ -30,3 +31,16 @@ for (const file of WEB_ASSETS) {
   copyFileSync(file, `dist/${file}`);
   console.log(`copied ${file}`);
 }
+
+// Give the service worker cache a name derived from the shipped assets so a
+// deploy that changes any of them gets a fresh cache instead of clients
+// serving the previous shell forever.
+const hash = createHash("sha256");
+for (const file of WEB_ASSETS) {
+  hash.update(readFileSync(`dist/${file}`));
+}
+const cacheVersion = hash.digest("hex").slice(0, 10);
+const swPath = "dist/sw.js";
+const sw = readFileSync(swPath, "utf8");
+writeFileSync(swPath, sw.replace("__CACHE_VERSION__", cacheVersion));
+console.log(`sw.js cache version: ${cacheVersion}`);

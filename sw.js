@@ -5,7 +5,11 @@
 // straight to the network and is never cached — health data and OAuth
 // responses must not be stored by the worker.
 
-const CACHE_NAME = "workout-shell-v1";
+// Replaced with a content hash of the app shell by scripts/build-dist.mjs at
+// build time, so a deploy with changed assets always gets a fresh cache and
+// clients pick up the update instead of serving the stale shell forever.
+const CACHE_VERSION = "__CACHE_VERSION__";
+const CACHE_NAME = `workout-shell-${CACHE_VERSION}`;
 
 const APP_SHELL = [
   "./",
@@ -78,6 +82,15 @@ self.addEventListener("fetch", (event) => {
         await cache.put(cacheUrl, copy);
         return response;
       })
-      .catch(() => caches.match(cacheUrl).then((cached) => cached || caches.match("./workout.html")))
+      .catch(() =>
+        caches.match(cacheUrl).then((cached) => {
+          if (cached) return cached;
+          // Only navigations get a generic HTML fallback. Falling back to
+          // workout.html for a missing script/stylesheet/manifest would make
+          // the browser try to parse HTML as that asset and fail to render.
+          if (request.mode === "navigate") return caches.match("./workout.html");
+          return undefined;
+        })
+      )
   );
 });
