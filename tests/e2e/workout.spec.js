@@ -221,11 +221,12 @@ test.describe("Workout App", () => {
     await page.evaluate(() => navigator.serviceWorker.ready);
     await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
 
-    const cachedScript = await page.evaluate(async () => {
+    const readCachedScript = () => page.evaluate(async () => {
       const cacheName = (await caches.keys()).find((key) => key.startsWith("workout-shell-"));
       const response = await caches.match("/workout.js", { cacheName });
       return response ? response.text() : "";
     });
+    const cachedScript = await readCachedScript();
     expect(cachedScript).toContain("WORKOUT_DATA");
 
     let intercepted = false;
@@ -242,16 +243,8 @@ test.describe("Workout App", () => {
     await page.waitForLoadState("networkidle");
     await expect.poll(() => intercepted).toBeTruthy();
 
-    await expect.poll(() => page.evaluate(async () => {
-      const cacheName = (await caches.keys()).find((key) => key.startsWith("workout-shell-"));
-      const response = await caches.match("/workout.js", { cacheName });
-      return response ? response.text() : "";
-    })).not.toContain("Captive portal");
-    const revalidatedScript = await page.evaluate(async () => {
-      const cacheName = (await caches.keys()).find((key) => key.startsWith("workout-shell-"));
-      const response = await caches.match("/workout.js", { cacheName });
-      return response ? response.text() : "";
-    });
+    await expect.poll(readCachedScript).not.toContain("Captive portal");
+    const revalidatedScript = await readCachedScript();
     expect(revalidatedScript).toContain("WORKOUT_DATA");
   });
 

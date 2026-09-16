@@ -73,23 +73,23 @@ function fallbackDocumentFor(pathname) {
 function shellPathFor(url) {
   const scopePath = new URL("./", self.location.href).pathname;
   const { pathname } = new URL(url, self.location.href);
-  return pathname.startsWith(scopePath) ? pathname.slice(scopePath.length) : pathname.replace(/^\//, "");
+  return pathname.startsWith(scopePath) ? pathname.slice(scopePath.length) : null;
 }
 
 function shellResponseRule(url) {
   const shellPath = shellPathFor(url);
-  return SHELL_RESPONSE_RULES.find(({ match }) => match.test(shellPath));
+  return shellPath === null ? null : SHELL_RESPONSE_RULES.find(({ match }) => match.test(shellPath));
 }
 
 async function validateShellResponse(url, response, stage) {
-  if (!response.ok || response.type !== "basic") throw new Error(`Failed to ${stage} ${url}: ${response.status}`);
+  if (!response.ok || response.type !== "basic") throw new Error(`Failed during ${stage} of ${url}: ${response.status}`);
   const rule = shellResponseRule(url);
-  if (!rule) throw new Error(`No shell validation rule to ${stage} ${url}`);
+  if (!rule) throw new Error(`No shell validation rule during ${stage} of ${url}`);
 
   const contentType = response.headers.get("content-type") || "";
-  if (!contentType.includes(rule.type)) throw new Error(`Unexpected content type to ${stage} ${url}: ${contentType}`);
+  if (!contentType.includes(rule.type)) throw new Error(`Unexpected content type during ${stage} of ${url}: ${contentType}`);
   if (rule.includes && !(await response.clone().text()).includes(rule.includes)) {
-    throw new Error(`Unexpected shell content to ${stage} ${url}`);
+    throw new Error(`Unexpected shell content during ${stage} of ${url}`);
   }
 }
 
