@@ -24,6 +24,10 @@ A lightweight, dependency-free weekly workout planner. No frameworks, no bundler
 - **Rest timer** — configurable countdown timer with an audio notification tone when rest is complete
 - **Editable profile** — inline fields for name, age, ethnicity, height, and weight, persisted in `localStorage`
 - **Display toggles** — show/hide exercise notes and difficulty labels, and turn exercise animations on/off (animations are also disabled automatically when the system prefers reduced motion)
+- **Workout logging** — tick each exercise done and record the sets, reps and weight you actually performed; every day's session is stored in `localStorage` under the local calendar date
+- **Progression** — each card shows "Last time: 3×8 @ 20 kg" from your most recent logged session of that exercise, so there is always a number to beat
+- **Progress & history** — a per-day "Today: 2 of 6 exercises" line, a current-streak counter, a rolling history of recent sessions, and a "Clear today's log" reset
+- **Installable / offline** — a web app manifest plus a service worker cache the app shell, so the program works in a gym with no signal and can be installed to the home screen
 - **Copy to clipboard** — one-click copy of exercise details for sharing
 - **Keyboard navigation** — full arrow-key support on the day tabs (ARIA tablist pattern)
 - **Accessibility** — skip link, ARIA roles, live regions, and focus-visible styles throughout
@@ -38,6 +42,7 @@ A lightweight, dependency-free weekly workout planner. No frameworks, no bundler
 - **File import** — a Google Health Connect / Google Fit or Garmin Connect export (JSON or CSV) can still be imported without any API setup
 - **Sample data** — one-click sample data per source to preview the dashboard
 - **Summary metrics** — days tracked, average steps, average resting heart rate, average sleep, total active calories, and latest VO2 max
+- **Training load** — sessions logged on the workout page appear as their own source in the daily records table, with "Workouts logged" and "Exercises done" summary cards, so strength work sits next to steps, sleep and VO2 max
 - **Daily records table** — merged, newest-first view of the 30 most recent days across both sources
 - **Local only** — there is no backend and no client secret in the repository: data is fetched or parsed in the browser, and tokens, settings and records live in `localStorage`. Requests use provider endpoints by default, or your configured token/API override endpoints
 
@@ -55,6 +60,7 @@ Tokens are refreshed automatically while a refresh token is available.
 | Layer | Tool |
 |---|---|
 | UI | Vanilla HTML / CSS / JavaScript (ES2020) |
+| Lint | [ESLint](https://eslint.org/) (flat config) + [HTMLHint](https://htmlhint.com/) |
 | Unit tests | [Jest](https://jestjs.io/) + jsdom |
 | E2E tests | [Playwright](https://playwright.dev/) (Chromium) |
 | Native shells | [Capacitor 7](https://capacitorjs.com/) (Android, iOS/iPadOS), SwiftUI (watchOS), Monkey C (Garmin Connect IQ) |
@@ -65,8 +71,14 @@ Tokens are refreshed automatically while a refresh token is available.
 
 ```
 index.html         redirects to workout.html
-workout.html, workout.js  7-day training program
-fitness.html, fitness.js  health dashboard
+workout.html, workout.js  7-day training program (UI)
+fitness.html, fitness.js  health dashboard (UI)
+common.js          storage, date-key and DOM helpers shared by both pages
+workout-log.js     workout log: entries, progression, streak, history (pure)
+fitness-core.js    parsing, CSV/JSON import, provider adapters, summaries (pure)
+styles.css         shared styles; workout.css / fitness.css are page-specific
+manifest.webmanifest, icon.svg, sw.js, sw-register.js  PWA / offline support
+eslint.config.js, .htmlhintrc, jest.config.js, playwright.config.js  tooling
 scripts/           build-dist.mjs, Android/iOS build helpers
 tests/e2e/         Playwright specs
 garmin/            Connect IQ app (Monkey C)
@@ -103,6 +115,14 @@ npm run build
 Copies the web assets into `dist/`. The CI, release and mobile build pipelines all use this
 script, so `dist/` is the single source of truth for what gets packaged and shipped.
 
+## Linting
+
+```bash
+npm run lint        # ESLint + HTMLHint
+npm run lint:js     # ESLint only
+npm run lint:html   # HTMLHint only
+```
+
 ## Testing
 
 ### Unit tests (Jest)
@@ -117,6 +137,10 @@ npm test
 npm run test:coverage
 ```
 
+`jest.config.js` enforces 100% line, branch, function and statement coverage for `common.js`,
+`workout-log.js`, `fitness-core.js`, `workout.js` and `fitness.js`, so anything extracted into a new
+module must be added there too.
+
 ### End-to-end tests (Playwright)
 
 ```bash
@@ -130,8 +154,8 @@ Playwright screenshots are saved to `playwright-screenshots/` and uploaded as a 
 
 Every push or pull request to `main` runs `.github/workflows/deploy.yml`:
 
-1. **HTML Lint** — runs `htmlhint` against all HTML files (push and pull request)
-2. **Unit & E2E Tests** — Jest with coverage, then Playwright, uploading the screenshots and HTML report as artifacts (push and pull request; the Playwright step is non-blocking)
+1. **Lint** — runs `npm run lint` (ESLint over the JavaScript, then `htmlhint` over the HTML) on push and pull request
+2. **Unit & E2E Tests** — Jest with coverage, then Playwright, uploading the screenshots and HTML report as artifacts (push and pull request). Both steps are blocking: a failing test stops the deploy.
 3. **Post Playwright screenshots** — pull requests only: comments on the pull request with a link to the screenshot artifact
 4. **Deploy to GitHub Pages** — pushes to `main` only, after lint + tests pass
 5. **Package Site** — pushes to `main` only: runs `npm run build` and uploads `dist/` zipped as the `workout-site` artifact
@@ -140,6 +164,9 @@ Two other workflows complete the pipeline:
 
 - **Auto-create Pull Request** (`auto-pr.yml`) — opens a draft PR for any pushed branch that doesn't already have one
 - **Release** (`release.yml`) — on a `v*` tag, re-runs the tests, builds the site zip and publishes a GitHub Release
+
+Dependabot (`.github/dependabot.yml`) opens weekly grouped update PRs for the npm dependencies and
+the GitHub Actions used by these workflows.
 
 ## Native Apps
 
