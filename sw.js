@@ -52,10 +52,37 @@ const APP_SHELL_URLS = new Set(
     return `${url.origin}${url.pathname}`;
   })
 );
+const SHELL_RESPONSE_RULES = [
+  { match: /(^|\/)fitness(\.html)?$/, type: "text/html", includes: "My Fitness" },
+  { match: /(^|\/)workout(\.html)?$/, type: "text/html", includes: "7-Day Longevity" },
+  { match: /(^|\/)(index\.html)?$/, type: "text/html", includes: "workout.html" },
+  { match: /\.css$/, type: "text/css" },
+  { match: /\.js$/, type: "javascript" },
+  { match: /\.webmanifest$/, type: "json" },
+  { match: /\.svg$/, type: "image/svg+xml" },
+  { match: /\.png$/, type: "image/png" }
+];
 
 function fallbackDocumentFor(pathname) {
   const route = NAVIGATION_FALLBACKS.find(({ match }) => match.test(pathname));
   return route ? route.document : DEFAULT_FALLBACK;
+}
+
+function shellResponseRule(url) {
+  const { pathname } = new URL(url, self.location.href);
+  return SHELL_RESPONSE_RULES.find(({ match }) => match.test(pathname));
+}
+
+async function validateShellResponse(url, response) {
+  if (!response.ok || response.type !== "basic") throw new Error(`Failed to fetch ${url}: ${response.status}`);
+  const rule = shellResponseRule(url);
+  if (!rule) throw new Error(`No shell validation rule for ${url}`);
+
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.includes(rule.type)) throw new Error(`Unexpected content type for ${url}: ${contentType}`);
+  if (rule.includes && !(await response.clone().text()).includes(rule.includes)) {
+    throw new Error(`Unexpected shell content for ${url}`);
+  }
 }
 
 // Replaying a redirected response for a navigation request makes the browser
@@ -78,7 +105,8 @@ function unredirect(response) {
 
 function precache(cache, url) {
   return fetch(url, { cache: "reload" }).then((response) => {
-    if (!response.ok) throw new Error(`Failed to precache ${url}: ${response.status}`);
+    return validateShellResponse(url, response).then(() => response);
+  }).then((response) => {
     return unredirect(response).then((clean) => cache.put(url, clean));
   });
 }
@@ -122,7 +150,7 @@ self.addEventListener("fetch", (event) => {
   // stored for the next load.
   const revalidate = fetch(request)
     .then(async (response) => {
-      if (!response.ok || response.type !== "basic") throw new Error("Response not cacheable");
+      await validateShellResponse(cacheUrl, response);
 
       const clean = await unredirect(response);
       const cache = await caches.open(CACHE_NAME);

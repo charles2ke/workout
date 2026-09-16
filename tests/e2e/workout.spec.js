@@ -215,6 +215,42 @@ test.describe("Workout App", () => {
     }
   });
 
+  test("background revalidation rejects captive portal shell responses", async ({ page, context }) => {
+    await page.goto("/workout");
+    await page.waitForLoadState("networkidle");
+    await page.evaluate(() => navigator.serviceWorker.ready);
+    await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
+
+    const cachedScript = await page.evaluate(async () => {
+      const cacheName = (await caches.keys()).find((key) => key.startsWith("workout-shell-"));
+      const response = await caches.match("/workout.js", { cacheName });
+      return response ? response.text() : "";
+    });
+    expect(cachedScript).toContain("WORKOUT_DATA");
+
+    let intercepted = false;
+    await context.route("**/workout.js", (route) => {
+      intercepted = true;
+      return route.fulfill({
+        status: 200,
+        contentType: "text/html",
+        body: "<!DOCTYPE html><title>Captive portal</title><p>Sign in to continue</p>"
+      });
+    });
+
+    await page.reload();
+    await page.waitForLoadState("networkidle");
+    expect(intercepted).toBeTruthy();
+
+    const revalidatedScript = await page.evaluate(async () => {
+      const cacheName = (await caches.keys()).find((key) => key.startsWith("workout-shell-"));
+      const response = await caches.match("/workout.js", { cacheName });
+      return response ? response.text() : "";
+    });
+    expect(revalidatedScript).toContain("WORKOUT_DATA");
+    expect(revalidatedScript).not.toContain("Captive portal");
+  });
+
   test("full page final state screenshot", async ({ page }) => {
     // Navigate to Saturday for a different view
     await page.locator("#tab-sat").click();
