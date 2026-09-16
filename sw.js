@@ -23,6 +23,7 @@ const APP_SHELL = [
   "./manifest.webmanifest",
   "./icon.svg"
 ];
+const APP_SHELL_URLS = new Set(APP_SHELL.map((path) => new URL(path, self.location.href).href));
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -58,7 +59,7 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
 
   const url = new URL(request.url);
-  if (url.origin !== self.location.origin) return;
+  if (!APP_SHELL_URLS.has(url.href)) return;
 
   event.respondWith(
     caches.match(request).then((cached) => {
