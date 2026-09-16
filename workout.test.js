@@ -896,6 +896,28 @@ describe("workout.js", () => {
       expect(card.querySelector(".log-last").textContent).toBe(`Last time (${previous}): 3×8 @ 20 kg`);
     });
 
+    test("updating a legacy entry moves it to the stable id and keeps progress accurate", () => {
+      const api = resetAndLoad();
+      const day = api._test.WORKOUT_DATA[0];
+      const exercise = day.exercises[0];
+      const legacyKey = api._test.exerciseKey(exercise.name);
+      resetAndLoad({
+        storageData: {
+          selectedDay: { dayId: day.id, dateKey: todayKey() },
+          workoutLog: { [todayKey()]: { dayId: day.id, entries: { [legacyKey]: { done: true, sets: 3 } } } }
+        }
+      });
+
+      const card = document.querySelector(`[data-exercise-key="${exercise.id}"]`);
+      expect(document.getElementById(`progress-${day.id}`).textContent).toContain("Today: 1 of");
+      control(card, "reps").value = "8";
+      dispatchChange(control(card, "reps"));
+
+      expect(storedLog()[todayKey()].entries).toEqual({
+        [exercise.id]: { done: true, sets: 3, reps: 8, weight: null }
+      });
+    });
+
     test("saved entries repopulate the controls on load", () => {
       const api = resetAndLoad();
       const day = api._test.WORKOUT_DATA[0];
