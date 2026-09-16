@@ -46,7 +46,8 @@ function validateLogValue(field, rawValue) {
   if (value === null || value < spec.min || value > spec.max) return { valid: false, value: null };
 
   const steps = (value - spec.min) / spec.step;
-  if (Math.abs(steps - Math.round(steps)) > 1e-9) return { valid: false, value: null };
+  const stepTolerance = Number.EPSILON * Math.max(1, Math.abs(steps)) * 8;
+  if (Math.abs(steps - Math.round(steps)) > stepTolerance) return { valid: false, value: null };
 
   return { valid: true, value };
 }

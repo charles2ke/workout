@@ -26,6 +26,14 @@ describe("workout-log.js", () => {
     });
   });
 
+  describe("validateLogValue", () => {
+    const log = loadLogModule();
+
+    test("rejects tiny values that are not on the configured step", () => {
+      expect(log.validateLogValue("weight", "0.0000000001")).toEqual({ valid: false, value: null });
+    });
+  });
+
   describe("loadLog", () => {
     test("returns an empty log when nothing is stored", () => {
       expect(loadLogModule().loadLog()).toEqual({});
