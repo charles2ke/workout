@@ -6,7 +6,7 @@
     "build": "node scripts/build-dist.mjs",
     "lint": "npm run lint:js && npm run lint:html",
     "lint:js": "eslint .",
-    "lint:html": "htmlhint \"**/*.html\"",
+    "lint:html": "htmlhint \"*.html\"",
     "test": "jest",
     "test:coverage": "jest --coverage",
     "test:e2e": "playwright test",

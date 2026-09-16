@@ -47,7 +47,7 @@ const nodeGlobals = {
 
 module.exports = [
   {
-    ignores: ["node_modules/**", "dist/**", "playwright-report/**", "playwright-results/**", "playwright-screenshots/**"]
+    ignores: ["node_modules/**", "coverage/**", "dist/**", "playwright-report/**", "playwright-results/**", "playwright-screenshots/**"]
   },
   js.configs.recommended,
   {
