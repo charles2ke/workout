@@ -229,19 +229,20 @@ test.describe("Workout App", () => {
     const cachedScript = await readCachedScript();
     expect(cachedScript).toContain("WORKOUT_DATA");
 
-    let intercepted = false;
+    let revalidationResponse;
     await context.route("**/workout.js", (route) => {
-      intercepted = true;
-      return route.fulfill({
+      revalidationResponse = route.fulfill({
         status: 200,
         contentType: "text/html",
         body: "<!DOCTYPE html><title>Captive portal</title><p>Sign in to continue</p>"
       });
+      return revalidationResponse;
     });
 
     await page.reload();
     await page.waitForLoadState("networkidle");
-    await expect.poll(() => intercepted).toBeTruthy();
+    await expect.poll(() => Boolean(revalidationResponse)).toBeTruthy();
+    await revalidationResponse;
 
     await expect.poll(readCachedScript).not.toContain("Captive portal");
     const revalidatedScript = await readCachedScript();

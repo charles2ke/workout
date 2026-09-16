@@ -55,14 +55,14 @@ const APP_SHELL_URLS = new Set(
 // Every APP_SHELL and OPTIONAL_SHELL URL must match a rule so new cached asset
 // types choose their validation intentionally.
 const SHELL_RESPONSE_RULES = [
-  { match: /^fitness(\.html)?$/, type: "text/html", includes: "My Fitness" },
-  { match: /^workout(\.html)?$/, type: "text/html", includes: "7-Day Longevity" },
-  { match: /^(index\.html)?$/, type: "text/html", includes: "workout.html" },
-  { match: /\.css$/, type: "text/css" },
-  { match: /\.js$/, type: "javascript" },
-  { match: /\.webmanifest$/, type: "json" },
-  { match: /\.svg$/, type: "image/svg+xml" },
-  { match: /\.png$/, type: "image/png" }
+  { match: /^fitness(\.html)?$/, types: ["text/html"], includes: "My Fitness" },
+  { match: /^workout(\.html)?$/, types: ["text/html"], includes: "7-Day Longevity" },
+  { match: /^(index\.html)?$/, types: ["text/html"], includes: "workout.html" },
+  { match: /\.css$/, types: ["text/css"] },
+  { match: /\.js$/, types: ["application/javascript", "text/javascript"] },
+  { match: /\.webmanifest$/, types: ["application/manifest+json", "application/json"] },
+  { match: /\.svg$/, types: ["image/svg+xml"] },
+  { match: /\.png$/, types: ["image/png"] }
 ];
 
 function fallbackDocumentFor(pathname) {
@@ -87,7 +87,8 @@ async function validateShellResponse(url, response, stage) {
   if (!rule) throw new Error(`No shell validation rule during ${stage} of ${url}`);
 
   const contentType = response.headers.get("content-type") || "";
-  if (!contentType.includes(rule.type)) throw new Error(`Unexpected content type during ${stage} of ${url}: ${contentType}`);
+  const mediaType = contentType.split(";")[0].trim().toLowerCase();
+  if (!rule.types.includes(mediaType)) throw new Error(`Unexpected content type during ${stage} of ${url}: ${contentType}`);
   if (rule.includes && !(await response.clone().text()).includes(rule.includes)) {
     throw new Error(`Unexpected shell content during ${stage} of ${url}`);
   }
