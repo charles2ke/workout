@@ -41,14 +41,16 @@ const APP_SHELL_URLS = new Set(
 // flag is cleared and the response stays usable for navigations.
 function unredirect(response) {
   if (!response.redirected) return Promise.resolve(response);
-  return response.blob().then(
-    (body) =>
-      new Response(body, {
-        status: response.status,
-        statusText: response.statusText,
-        headers: response.headers
-      })
-  );
+  return response.blob().then((body) => {
+    const headers = new Headers(response.headers);
+    headers.delete("content-encoding");
+    headers.delete("content-length");
+    return new Response(body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers
+    });
+  });
 }
 
 self.addEventListener("install", (event) => {
