@@ -11,7 +11,7 @@ function loadLogModule(stored) {
 
 describe("workout-log.js", () => {
   describe("exerciseKey", () => {
-    const log = loadLogModule();
+loadLogModule();
     test("slugs a name", () => expect(log.exerciseKey("Bench Press / Push-ups")).toBe("bench-press-push-ups"));
     test("trims leading and trailing separators", () => expect(log.exerciseKey("  !Zone 2 Cardio!  ")).toBe("zone-2-cardio"));
   });
