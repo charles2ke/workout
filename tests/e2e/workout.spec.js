@@ -172,6 +172,24 @@ test.describe("Workout App", () => {
     expect(serviceWorker.ok()).toBeTruthy();
   });
 
+  test("an offline launch at the clean URL is served from the cache", async ({ page, context }) => {
+    // The dev server redirects /workout.html to /workout, so an installed app
+    // can be launched at the extensionless URL: it must be precached too.
+    await page.goto("/workout");
+    await page.waitForLoadState("networkidle");
+    await page.evaluate(() => navigator.serviceWorker.ready);
+    await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
+
+    await context.setOffline(true);
+    try {
+      await page.reload();
+      await expect(page.locator("h1")).toContainText("7-Day Longevity");
+      await page.screenshot({ path: "playwright-screenshots/18-offline-clean-url.png", fullPage: true });
+    } finally {
+      await context.setOffline(false);
+    }
+  });
+
   test("full page final state screenshot", async ({ page }) => {
     // Navigate to Saturday for a different view
     await page.locator("#tab-sat").click();

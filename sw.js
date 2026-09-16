@@ -16,6 +16,11 @@ const APP_SHELL = [
   "./index.html",
   "./workout.html",
   "./fitness.html",
+  // Static hosts (and the `serve` dev server) redirect "/page.html" to the
+  // extensionless "/page", so an installed app can be launched there. Precache
+  // both spellings or an offline launch at the clean URL is never intercepted.
+  "./workout",
+  "./fitness",
   "./styles.css",
   "./workout.css",
   "./fitness.css",
