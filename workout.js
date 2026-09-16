@@ -149,7 +149,7 @@ const Common = (typeof window !== "undefined" && window.WorkoutCommon) || requir
 /* istanbul ignore next -- browser global in the page, require() under Jest */
 const Log = (typeof window !== "undefined" && window.WorkoutLog) || require("./workout-log.js");
 
-const { storage, getLocalDateKey, formatSeconds, createElement } = Common;
+const { storage, getLocalDateKey, formatSeconds, createElement, toNumber } = Common;
 const {
   exerciseKey,
   exerciseIdentity,
@@ -295,12 +295,14 @@ function lastPerformanceText(key, todayKey, legacyKey) {
 
 // Builds the per-exercise log controls: a done checkbox, the sets/reps/weight
 // actually performed, and what to beat from the last time it was recorded.
-function createLogControls(key, todayKey, legacyKey) {
+// The exercise name goes into every accessible name so a screen-reader user
+// navigating the form controls knows which exercise they are updating.
+function createLogControls(exerciseName, key, todayKey, legacyKey) {
   const entry = getEntry(workoutLog, todayKey, key, legacyKey);
 
   const checkbox = createElement("input", {
     className: "log-check",
-    attrs: { type: "checkbox", "data-log-field": "done", "aria-label": "Mark exercise complete" }
+    attrs: { type: "checkbox", "data-log-field": "done", "aria-label": `Mark ${exerciseName} complete` }
   });
   checkbox.checked = entry.done;
 
@@ -314,7 +316,7 @@ function createLogControls(key, todayKey, legacyKey) {
         step: String(step),
         inputmode: "decimal",
         "data-log-field": field,
-        "aria-label": `${label} performed`
+        "aria-label": `${label} performed for ${exerciseName}`
       }
     });
     input.value = entry[field] === null ? "" : String(entry[field]);
@@ -433,7 +435,14 @@ function renderDays(days) {
       card.dataset.legacyExerciseKey = legacyKey || "";
       card.dataset.dayId = day.id;
 
-      info.append(exerciseTitle, stats, difficulty, notes, copyButton, createLogControls(key, todayKey, legacyKey));
+      info.append(
+        exerciseTitle,
+        stats,
+        difficulty,
+        notes,
+        copyButton,
+        createLogControls(exercise.name, key, todayKey, legacyKey)
+      );
       card.append(svgContainer, info);
       grid.appendChild(card);
     });
@@ -602,6 +611,28 @@ function refreshLogViews() {
   renderHistory();
 }
 
+// `min`/`max`/`step` only constrain the spinner buttons — a typed "-1" or
+// "20.25" still reaches the change handler — so numeric log values are checked
+// here before anything is persisted. An empty value is valid and clears the
+// field.
+function validateLogValue(field, rawValue) {
+  const spec = LOG_FIELDS.find((candidate) => candidate.field === field);
+  /* istanbul ignore if -- every numeric control is built from LOG_FIELDS */
+  if (!spec) return { valid: false, value: null };
+
+  const raw = String(rawValue).trim();
+  if (raw === "") return { valid: true, value: "" };
+
+  const value = toNumber(raw);
+  if (value === null || value < spec.min || value > spec.max) return { valid: false, value: null };
+
+  // Float-safe step check: 20.25 is rejected for a 0.5 step, 20.5 is not.
+  const steps = (value - spec.min) / spec.step;
+  if (Math.abs(steps - Math.round(steps)) > 1e-9) return { valid: false, value: null };
+
+  return { valid: true, value };
+}
+
 // Delegated so the controls survive re-renders of the day panels.
 workoutContent.addEventListener("change", (event) => {
   const control = event.target.closest("[data-log-field]");
@@ -611,7 +642,17 @@ workoutContent.addEventListener("change", (event) => {
 
   const card = control.closest(".exercise-card");
   const field = control.dataset.logField;
-  const patch = field === "done" ? { done: control.checked } : { [field]: control.value };
+
+  let patch;
+  if (field === "done") {
+    patch = { done: control.checked };
+  } else {
+    const { valid, value } = validateLogValue(field, control.value);
+    control.classList.toggle("is-invalid", !valid);
+    control.setAttribute("aria-invalid", valid ? "false" : "true");
+    if (!valid) return;
+    patch = { [field]: value };
+  }
 
   workoutLog = updateEntry(
     workoutLog,

@@ -113,8 +113,8 @@ jobs:
               '`05` Ethnicity changed · `06` Profile reset · `07` Notes hidden · `08` Skip link',
               '`09` Timer running · `10` Timer complete · `11` Copy feedback · `12` Saturday view',
               '`13` Exercise animation · `14` Animation off · `15` Exercise logged · `16` Log cleared',
-              '`17` Progression target · `18` Offline clean URL · `20` Fitness initial · `21` Google sample · `22` Both sources',
-              '`23` CSV import · `24` Import error · `25` Disconnected · `26` Page navigation',
+              '`17` Progression target · `18` Offline clean URL · `19` Offline My Fitness · `20` Fitness initial · `21` Google sample',
+              '`22` Both sources · `23` CSV import · `24` Import error · `25` Disconnected · `26` Page navigation',
               '`27` API settings · `28` Sync error',
             ].join('\n');
 

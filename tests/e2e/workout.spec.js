@@ -166,7 +166,16 @@ test.describe("Workout App", () => {
     expect(manifest.ok()).toBeTruthy();
     const body = await manifest.json();
     expect(body.name).toContain("7-Day");
-    expect(body.icons.length).toBeGreaterThan(0);
+
+    // Chromium's installability check needs raster candidates at 192 and 512.
+    const sizes = body.icons.map((icon) => icon.sizes);
+    expect(sizes).toContain("192x192");
+    expect(sizes).toContain("512x512");
+    for (const src of ["/icon-192.png", "/icon-512.png"]) {
+      const icon = await page.request.get(src);
+      expect(icon.ok()).toBeTruthy();
+    }
+    await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveAttribute("href", "icon-192.png");
 
     const serviceWorker = await page.request.get("/sw.js");
     expect(serviceWorker.ok()).toBeTruthy();
@@ -185,6 +194,22 @@ test.describe("Workout App", () => {
       await page.reload();
       await expect(page.locator("h1")).toContainText("7-Day Longevity");
       await page.screenshot({ path: "playwright-screenshots/18-offline-clean-url.png", fullPage: true });
+    } finally {
+      await context.setOffline(false);
+    }
+  });
+
+  test("an offline launch of My Fitness serves the fitness page", async ({ page, context }) => {
+    await page.goto("/fitness");
+    await page.waitForLoadState("networkidle");
+    await page.evaluate(() => navigator.serviceWorker.ready);
+    await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
+
+    await context.setOffline(true);
+    try {
+      await page.reload();
+      await expect(page.locator("h1")).toContainText("My Fitness");
+      await page.screenshot({ path: "playwright-screenshots/19-offline-fitness.png", fullPage: true });
     } finally {
       await context.setOffline(false);
     }

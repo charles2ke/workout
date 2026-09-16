@@ -27,7 +27,7 @@ A lightweight, dependency-free weekly workout planner. No frameworks, no bundler
 - **Workout logging** — tick each exercise done and record the sets, reps and weight you actually performed; every day's session is stored in `localStorage` under the local calendar date
 - **Progression** — each card shows "Last time: 3×8 @ 20 kg" from your most recent logged session of that exercise, so there is always a number to beat
 - **Progress & history** — a per-day "Today: 2 of 6 exercises" line, a current-streak counter, a rolling history of recent sessions, and a "Clear today's log" reset
-- **Installable / offline** — a web app manifest plus a service worker cache the app shell, so the program works in a gym with no signal and can be installed to the home screen
+- **Installable / offline** — a web app manifest with 192×192 and 512×512 raster icons plus a cache-first service worker app shell, so the program works in a gym with no signal and can be installed to the home screen
 - **Copy to clipboard** — one-click copy of exercise details for sharing
 - **Keyboard navigation** — full arrow-key support on the day tabs (ARIA tablist pattern)
 - **Accessibility** — skip link, ARIA roles, live regions, and focus-visible styles throughout
@@ -77,8 +77,9 @@ common.js          storage, date-key and DOM helpers shared by both pages
 workout-log.js     workout log: entries, progression, streak, history (pure)
 fitness-core.js    parsing, CSV/JSON import, provider adapters, summaries (pure)
 styles.css         shared styles; workout.css / fitness.css are page-specific
-manifest.webmanifest, icon.svg, sw.js, sw-register.js  PWA / offline support
-eslint.config.js, .htmlhintrc, jest.config.js, playwright.config.js  tooling
+manifest.webmanifest, icon.svg, icon-192.png, icon-512.png  PWA icons and metadata
+sw.js, sw-register.js  offline app-shell service worker
+eslint.config.js, jest.config.js, playwright.config.js  tooling
 scripts/           build-dist.mjs, Android/iOS build helpers
 tests/e2e/         Playwright specs
 garmin/            Connect IQ app (Monkey C)
