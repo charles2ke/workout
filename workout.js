@@ -13,6 +13,7 @@ const WORKOUT_DATA = [
     estimatedMinutes: 45,
     exercises: [
       {
+        id: "bench-press-push-ups",
         name: "Bench Press / Push-ups",
         stats: "3 Sets • 8–12 Reps • 90s Rest",
         notes: "Retract shoulder blades; elbows tucked at 45°.",
@@ -21,6 +22,7 @@ const WORKOUT_DATA = [
         illustration: "press"
       },
       {
+        id: "lat-pulldowns-pull-ups",
         name: "Lat Pulldowns / Pull-ups",
         stats: "3 Sets • 8–10 Reps • 90s Rest",
         notes: "Drive with elbows down smoothly to upper chest.",
@@ -38,6 +40,7 @@ const WORKOUT_DATA = [
     estimatedMinutes: 40,
     exercises: [
       {
+        id: "goblet-squats",
         name: "Goblet Squats",
         stats: "3 Sets • 10–12 Reps • 90s Rest",
         notes: "Upright chest, sit between hips, knees out.",
@@ -55,6 +58,7 @@ const WORKOUT_DATA = [
     estimatedMinutes: 30,
     exercises: [
       {
+        id: "zone-2-cardio",
         name: "Zone 2 Cardio",
         stats: "30 Mins • HR 105–120 BPM",
         notes: "Brisk walk, light cycling, or light rowing.",
@@ -72,6 +76,7 @@ const WORKOUT_DATA = [
     estimatedMinutes: 40,
     exercises: [
       {
+        id: "single-arm-db-rows",
         name: "Single-Arm DB Rows",
         stats: "3 Sets • 10 Reps/side • 60s Rest",
         notes: "Pull dumbbell to hip, keeping elbow close.",
@@ -89,6 +94,7 @@ const WORKOUT_DATA = [
     estimatedMinutes: 40,
     exercises: [
       {
+        id: "bulgarian-split-squats",
         name: "Bulgarian Split Squats",
         stats: "3 Sets • 8 Reps/leg • 90s Rest",
         notes: "Keep front foot flat; controls hip stability.",
@@ -106,6 +112,7 @@ const WORKOUT_DATA = [
     estimatedMinutes: 35,
     exercises: [
       {
+        id: "kettlebell-swings",
         name: "Kettlebell Swings",
         stats: "3 Rounds • 12–15 Reps",
         notes: "Explode from the hips; power comes from glutes.",
@@ -123,6 +130,7 @@ const WORKOUT_DATA = [
     estimatedMinutes: 20,
     exercises: [
       {
+        id: "foam-rolling-walk",
         name: "Foam Rolling & Walk",
         stats: "15–20 Mins • Light Pressure",
         notes: "Focus on upper back, quads, and calves.",
@@ -144,6 +152,7 @@ const Log = (typeof window !== "undefined" && window.WorkoutLog) || require("./w
 const { storage, getLocalDateKey, formatSeconds, createElement } = Common;
 const {
   exerciseKey,
+  exerciseIdentity,
   loadLog,
   getEntry,
   updateEntry,
@@ -272,19 +281,19 @@ const LOG_FIELDS = [
 ];
 
 function exerciseKeysFor(day) {
-  return day.exercises.map((exercise) => exerciseKey(exercise.name));
+  return day.exercises.map((exercise) => exerciseIdentity(exercise));
 }
 
-function lastPerformanceText(key, todayKey) {
-  const previous = lastPerformance(workoutLog, key, todayKey);
+function lastPerformanceText(key, todayKey, legacyKey) {
+  const previous = lastPerformance(workoutLog, key, todayKey, legacyKey);
   if (!previous) return "No previous entry yet — today sets the baseline.";
   return `Last time (${previous.dateKey}): ${formatPerformance(previous.entry)}`;
 }
 
 // Builds the per-exercise log controls: a done checkbox, the sets/reps/weight
 // actually performed, and what to beat from the last time it was recorded.
-function createLogControls(key, todayKey) {
-  const entry = getEntry(workoutLog, todayKey, key);
+function createLogControls(key, todayKey, legacyKey) {
+  const entry = getEntry(workoutLog, todayKey, key, legacyKey);
 
   const checkbox = createElement("input", {
     className: "log-check",
@@ -314,7 +323,7 @@ function createLogControls(key, todayKey) {
     children: [
       createElement("label", { className: "log-done", text: "Done", children: [checkbox] }),
       createElement("div", { className: "log-fields", children: fields }),
-      createElement("p", { className: "log-last", text: lastPerformanceText(key, todayKey) })
+      createElement("p", { className: "log-last", text: lastPerformanceText(key, todayKey, legacyKey) })
     ]
   });
 }
@@ -415,11 +424,12 @@ function renderDays(days) {
       copyButton.setAttribute("aria-label", `Copy details for ${exercise.name}`);
       copyButton.textContent = "Copy details";
 
-      const key = exerciseKey(exercise.name);
+      const key = exerciseIdentity(exercise);
+      const legacyKey = exercise.id ? exerciseKey(exercise.name) : null;
       card.dataset.exerciseKey = key;
       card.dataset.dayId = day.id;
 
-      info.append(exerciseTitle, stats, difficulty, notes, copyButton, createLogControls(key, todayKey));
+      info.append(exerciseTitle, stats, difficulty, notes, copyButton, createLogControls(key, todayKey, legacyKey));
       card.append(svgContainer, info);
       grid.appendChild(card);
     });

@@ -13,13 +13,20 @@ const { storage, getLocalDateKey, shiftDateKey, toNumber } = (typeof window !== 
 const WORKOUT_LOG_KEY = "workoutLog";
 const MAX_HISTORY_DAYS = 14;
 
-// Exercise names are the stable identity across days, so they are slugged into
-// a key rather than using a positional index that shifts when the plan changes.
+// Fallback identity for exercises that predate the `id` field: a slug of the
+// display name. Kept only as a migration alias — see exerciseIdentity below.
 function exerciseKey(name) {
   return String(name)
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
+}
+
+// The stable identity for an exercise. Plan authors give each exercise a
+// permanent `id` so renaming it (or normalizing punctuation) never orphans
+// its history; only exercises without one fall back to a name slug.
+function exerciseIdentity(exercise) {
+  return exercise && exercise.id ? String(exercise.id) : exerciseKey(exercise && exercise.name);
 }
 
 function sanitizeEntry(raw) {
@@ -67,9 +74,13 @@ function emptyEntry() {
   return { done: false, sets: null, reps: null, weight: null };
 }
 
-function getEntry(log, dateKey, key) {
+// `legacyKey` is an optional alias — the name-slug an exercise used before it
+// had a stable `id` — so history recorded under the old key is still found
+// after the plan gains (or changes) an id, without ever writing to it again.
+function getEntry(log, dateKey, key, legacyKey) {
   const session = log[dateKey];
-  const entry = session && session.entries[key];
+  if (!session) return emptyEntry();
+  const entry = session.entries[key] || (legacyKey && legacyKey !== key ? session.entries[legacyKey] : undefined);
   return entry ? { ...entry } : emptyEntry();
 }
 
@@ -129,15 +140,17 @@ function formatPerformance(entry) {
 }
 
 // Most recent day strictly before `beforeDateKey` where this exercise was
-// recorded with something worth beating.
-function lastPerformance(log, key, beforeDateKey) {
+// recorded with something worth beating. `legacyKey` is checked as a fallback
+// so history under a pre-id name slug still counts.
+function lastPerformance(log, key, beforeDateKey, legacyKey) {
   const dateKeys = Object.keys(log)
     .filter((dateKey) => dateKey < beforeDateKey)
     .sort()
     .reverse();
 
   for (const dateKey of dateKeys) {
-    const entry = log[dateKey].entries[key];
+    const entries = log[dateKey].entries;
+    const entry = entries[key] || (legacyKey && legacyKey !== key ? entries[legacyKey] : undefined);
     if (entry && formatPerformance(entry)) return { dateKey, entry };
   }
 
@@ -196,6 +209,7 @@ const WorkoutLog = {
   WORKOUT_LOG_KEY,
   MAX_HISTORY_DAYS,
   exerciseKey,
+  exerciseIdentity,
   loadLog,
   saveLog,
   emptyEntry,

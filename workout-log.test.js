@@ -16,6 +16,16 @@ describe("workout-log.js", () => {
     test("trims leading and trailing separators", () => expect(log.exerciseKey("  !Zone 2 Cardio!  ")).toBe("zone-2-cardio"));
   });
 
+  describe("exerciseIdentity", () => {
+    const log = loadLogModule();
+    test("uses the stable id when present", () => {
+      expect(log.exerciseIdentity({ id: "goblet-squat", name: "Goblet Squats" })).toBe("goblet-squat");
+    });
+    test("falls back to a name slug when there is no id", () => {
+      expect(log.exerciseIdentity({ name: "Goblet Squats" })).toBe("goblet-squats");
+    });
+  });
+
   describe("loadLog", () => {
     test("returns an empty log when nothing is stored", () => {
       expect(loadLogModule().loadLog()).toEqual({});
@@ -91,6 +101,18 @@ describe("workout-log.js", () => {
       const entry = api.getEntry(log, "2026-09-16", "squat");
       entry.sets = 99;
       expect(stored.sets).toBe(3);
+    });
+
+    test("getEntry falls back to a legacy key when the current key is not found", () => {
+      const api = loadLogModule();
+      const log = { "2026-09-16": { dayId: "wed", entries: { "goblet-squats": { done: true } } } };
+      expect(api.getEntry(log, "2026-09-16", "goblet-squat", "goblet-squats").done).toBe(true);
+    });
+
+    test("getEntry ignores the legacy key when it is the same as the current key", () => {
+      const api = loadLogModule();
+      const log = { "2026-09-16": { dayId: "wed", entries: {} } };
+      expect(api.getEntry(log, "2026-09-16", "squat", "squat").done).toBe(false);
     });
   });
 
@@ -198,6 +220,17 @@ describe("workout-log.js", () => {
 
     test("returns null for an exercise never logged", () => {
       expect(api.lastPerformance(log, "burpee", "2026-09-16")).toBeNull();
+    });
+
+    test("falls back to a legacy key when the current key was never logged", () => {
+      expect(api.lastPerformance(log, "goblet-squat", "2026-09-16", "squat")).toEqual({
+        dateKey: "2026-09-14",
+        entry: { done: true, sets: 3, reps: 10, weight: 20 }
+      });
+    });
+
+    test("ignores the legacy key when it is the same as the current key", () => {
+      expect(api.lastPerformance(log, "squat", "2026-09-16", "squat").dateKey).toBe("2026-09-14");
     });
   });
 

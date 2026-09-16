@@ -879,6 +879,23 @@ describe("workout.js", () => {
       expect(card.querySelector(".log-last").textContent).toBe(`Last time (${previous}): 3×8 @ 20 kg`);
     });
 
+    test("history logged under a pre-id name slug is still found via the legacy alias", () => {
+      let api = resetAndLoad();
+      const legacyKey = api._test.exerciseKey(api._test.WORKOUT_DATA[0].exercises[0].name);
+      const day0Id = api._test.WORKOUT_DATA[0].id;
+      const previous = shift(-7);
+      api = resetAndLoad({
+        storageData: {
+          selectedDay: { dayId: day0Id, dateKey: todayKey() },
+          workoutLog: { [previous]: { dayId: day0Id, entries: { [legacyKey]: { done: true, sets: 3, reps: 8, weight: 20 } } } }
+        }
+      });
+      delete api._test.WORKOUT_DATA[0].exercises[0].id;
+      api._test.renderDays(api._test.WORKOUT_DATA);
+      const card = document.querySelector(`[data-exercise-key="${legacyKey}"]`);
+      expect(card.querySelector(".log-last").textContent).toBe(`Last time (${previous}): 3×8 @ 20 kg`);
+    });
+
     test("saved entries repopulate the controls on load", () => {
       const api = resetAndLoad();
       const day = api._test.WORKOUT_DATA[0];
