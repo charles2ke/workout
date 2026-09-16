@@ -31,18 +31,29 @@ const APP_SHELL_URLS = new Set(
   })
 );
 
+// Some static hosts (and `serve`, used by the E2E tests) answer "/page.html"
+// with a redirect to "/page". A redirected response cannot be replayed for a
+// navigation request — the browser aborts with a "redirected response" error —
+// so rebuild it as a plain response before caching or returning it.
+function unredirect(response) {
+  if (!response.redirected) return response;
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers
+  });
+}
+
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
       .open(CACHE_NAME)
-      // A single missing file must not break the whole install. Redirected
-      // responses are skipped: replaying one for a navigation request makes the
-      // browser abort with a "redirected response" error.
+      // A single missing file must not break the whole install.
       .then((cache) =>
         Promise.allSettled(
           APP_SHELL.map((url) =>
             fetch(url, { cache: "reload" }).then((response) =>
-              response.ok && !response.redirected ? cache.put(url, response) : null
+              response.ok ? cache.put(url, unredirect(response)) : null
             )
           )
         )
@@ -71,13 +82,19 @@ self.addEventListener("fetch", (event) => {
   event.respondWith(
     fetch(request)
       .then(async (response) => {
-        if (!response.ok || response.redirected || response.type !== "basic") throw new Error("Response not cacheable");
+        if (!response.ok || response.type !== "basic") throw new Error("Response not usable");
 
-        const copy = response.clone();
+        const usable = unredirect(response);
+        const copy = usable.clone();
         const cache = await caches.open(CACHE_NAME);
         await cache.put(cacheUrl, copy);
-        return response;
+        return usable;
       })
-      .catch(() => caches.match(cacheUrl).then((cached) => cached || caches.match("./workout.html")))
+      .catch(() =>
+        caches
+          .match(cacheUrl)
+          .then((cached) => cached || caches.match("./workout.html"))
+          .then((cached) => cached || Response.error())
+      )
   );
 });
