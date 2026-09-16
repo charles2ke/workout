@@ -205,6 +205,15 @@ test.describe("Workout App", () => {
     await page.evaluate(() => navigator.serviceWorker.ready);
     await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
 
+    // Drop the precached clean-URL alias so the reload misses the cache and the
+    // route-aware navigation fallback is what serves the fitness document.
+    const deletedAlias = await page.evaluate(async () => {
+      const cacheName = (await caches.keys()).find((key) => key.startsWith("workout-shell-"));
+      const cache = await caches.open(cacheName);
+      return cache.delete(new URL("/fitness", location.href).href);
+    });
+    expect(deletedAlias).toBe(true);
+
     await context.setOffline(true);
     try {
       await page.reload();

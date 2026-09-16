@@ -880,6 +880,23 @@ describe("workout.js", () => {
       expect(input.getAttribute("aria-invalid")).toBe("true");
     });
 
+    test("a badInput value is rejected instead of clearing the stored measurement", () => {
+      resetAndLoad();
+      const card = firstCard();
+      const input = control(card, "weight");
+      input.value = "40";
+      dispatchChange(input);
+
+      // A number input reports unparsable text as an empty value with badInput.
+      input.value = "";
+      Object.defineProperty(input, "validity", { value: { badInput: true }, configurable: true });
+      dispatchChange(input);
+
+      expect(storedLog()[todayKey()].entries[card.dataset.exerciseKey].weight).toBe(40);
+      expect(input.getAttribute("aria-invalid")).toBe("true");
+      expect(input.classList.contains("is-invalid")).toBe(true);
+    });
+
     test("a value at the top of the allowed range is accepted and clears the invalid state", () => {
       resetAndLoad();
       const card = firstCard();

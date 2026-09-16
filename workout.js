@@ -621,7 +621,12 @@ workoutContent.addEventListener("change", (event) => {
   if (field === "done") {
     patch = { done: control.checked };
   } else {
-    const { valid, value } = validateLogValue(field, control.value);
+    // A number input exposes unparsable text as an empty value plus badInput,
+    // so an empty string alone cannot be trusted to mean "cleared".
+    const badInput = Boolean(control.validity && control.validity.badInput);
+    const { valid, value } = badInput
+      ? { valid: false, value: null }
+      : validateLogValue(field, control.value);
     control.classList.toggle("is-invalid", !valid);
     control.setAttribute("aria-invalid", valid ? "false" : "true");
     if (!valid) return;
