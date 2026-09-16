@@ -42,5 +42,8 @@ for (const file of WEB_ASSETS) {
 const cacheVersion = hash.digest("hex").slice(0, 10);
 const swPath = "dist/sw.js";
 const sw = readFileSync(swPath, "utf8");
+if (!sw.includes("__CACHE_VERSION__")) {
+  throw new Error("sw.js is missing the __CACHE_VERSION__ placeholder; cache-busting would not be applied.");
+}
 writeFileSync(swPath, sw.replace("__CACHE_VERSION__", cacheVersion));
 console.log(`sw.js cache version: ${cacheVersion}`);
