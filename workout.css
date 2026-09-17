@@ -432,6 +432,11 @@
   font-size: 0.88rem;
 }
 
+.log-input.is-invalid {
+  border-color: var(--danger);
+  outline: 1px solid var(--danger);
+}
+
 .log-last {
   font-size: 0.8rem;
   color: var(--text-muted);

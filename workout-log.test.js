@@ -26,6 +26,26 @@ describe("workout-log.js", () => {
     });
   });
 
+  describe("validateLogValue", () => {
+    const log = loadLogModule();
+
+    test("rejects tiny values that are not on the configured step", () => {
+      expect(log.validateLogValue("weight", "0.0000000001")).toEqual({ valid: false, value: null });
+    });
+
+    test("accepts large values that are on the configured step", () => {
+      expect(log.validateLogValue("weight", "998.5")).toEqual({ valid: true, value: 998.5 });
+    });
+
+    test("accepts values within floating-point drift of the configured step", () => {
+      expect(log.validateLogValue("weight", "1.0000000000000002")).toEqual({ valid: true, value: 1.0000000000000002 });
+    });
+
+    test("rejects large values that are just off the reps step", () => {
+      expect(log.validateLogValue("reps", "998.4999")).toEqual({ valid: false, value: null });
+    });
+  });
+
   describe("loadLog", () => {
     test("returns an empty log when nothing is stored", () => {
       expect(loadLogModule().loadLog()).toEqual({});
@@ -73,6 +93,24 @@ describe("workout-log.js", () => {
     test("keeps an entry recorded with numbers but not marked done", () => {
       const api = loadLogModule({ "2026-09-16": { dayId: "wed", entries: { squat: { sets: 3 } } } });
       expect(api.loadLog()["2026-09-16"].entries.squat).toEqual({ done: false, sets: 3, reps: null, weight: null });
+    });
+
+    test("drops stored measurements that violate field constraints", () => {
+      const api = loadLogModule({
+        "2026-09-16": {
+          dayId: "wed",
+          entries: {
+            squat: { done: true, sets: -1, reps: 8, weight: 20.25 },
+            row: { sets: 100 }
+          }
+        }
+      });
+      expect(api.loadLog()).toEqual({
+        "2026-09-16": {
+          dayId: "wed",
+          entries: { squat: { done: true, sets: null, reps: 8, weight: null } }
+        }
+      });
     });
   });
 
@@ -151,6 +189,18 @@ describe("workout-log.js", () => {
       const api = loadLogModule();
       const log = api.updateEntry({}, "2026-09-16", "wed", "squat", { weight: "20" });
       expect(log["2026-09-16"].entries.squat).toEqual({ done: false, sets: null, reps: null, weight: 20 });
+    });
+
+    test("drops invalid existing measurements when updating another field", () => {
+      const api = loadLogModule();
+      const log = {
+        "2026-09-16": {
+          dayId: "wed",
+          entries: { squat: { done: false, sets: -1, reps: 8, weight: 20.25 } }
+        }
+      };
+      api.updateEntry(log, "2026-09-16", "wed", "squat", { reps: 10 });
+      expect(log["2026-09-16"].entries.squat).toEqual({ done: false, sets: null, reps: 10, weight: null });
     });
 
     test("moves a legacy entry to the stable key when updating it", () => {

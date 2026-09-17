@@ -166,15 +166,16 @@ test.describe("Workout App", () => {
     expect(manifest.ok()).toBeTruthy();
     const body = await manifest.json();
     expect(body.name).toContain("7-Day");
-    expect(body.icons.length).toBeGreaterThan(0);
-    // Chromium installability needs concrete raster install icons, not just an
-    // SVG with sizes "any", so assert both sizes are declared and served.
-    for (const size of ["192x192", "512x512"]) {
-      const icon = body.icons.find((entry) => entry.sizes === size && entry.type === "image/png");
-      expect(icon, `manifest is missing a ${size} PNG icon`).toBeTruthy();
-      const iconResponse = await page.request.get(icon.src.replace("./", "/"));
-      expect(iconResponse.ok()).toBeTruthy();
+
+    // Chromium's installability check needs raster candidates at 192 and 512.
+    const sizes = body.icons.map((icon) => icon.sizes);
+    expect(sizes).toContain("192x192");
+    expect(sizes).toContain("512x512");
+    for (const src of ["/icon-192.png", "/icon-512.png"]) {
+      const icon = await page.request.get(src);
+      expect(icon.ok()).toBeTruthy();
     }
+    await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveAttribute("href", "icon-192.png");
 
     const serviceWorker = await page.request.get("/sw.js");
     expect(serviceWorker.ok()).toBeTruthy();
@@ -196,6 +197,67 @@ test.describe("Workout App", () => {
     } finally {
       await context.setOffline(false);
     }
+  });
+
+  test("an offline launch of My Fitness serves the fitness page", async ({ page, context }) => {
+    await page.goto("/fitness");
+    await page.waitForLoadState("networkidle");
+    await page.evaluate(() => navigator.serviceWorker.ready);
+    await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
+
+    // Drop the precached clean-URL alias so the reload misses the cache and the
+    // route-aware navigation fallback is what serves the fitness document.
+    const deletedAlias = await page.evaluate(async () => {
+      const cacheName = (await caches.keys()).find((key) => key.startsWith("workout-shell-"));
+      const cache = await caches.open(cacheName);
+      return cache.delete(new URL("/fitness", location.href).href);
+    });
+    expect(deletedAlias).toBe(true);
+
+    await context.setOffline(true);
+    try {
+      await page.reload();
+      await expect(page.locator("h1")).toContainText("My Fitness");
+      await page.screenshot({ path: "playwright-screenshots/19-offline-fitness.png", fullPage: true });
+    } finally {
+      await context.setOffline(false);
+    }
+  });
+
+  test("background revalidation rejects captive portal shell responses", async ({ page, context }) => {
+    await page.goto("/workout");
+    await page.waitForLoadState("networkidle");
+    await page.evaluate(() => navigator.serviceWorker.ready);
+    await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
+
+    const readCachedScript = () => page.evaluate(async () => {
+      const cacheName = (await caches.keys()).find((key) => key.startsWith("workout-shell-"));
+      const response = await caches.match("/workout.js", { cacheName });
+      return response ? response.text() : "";
+    });
+    const cachedScript = await readCachedScript();
+    expect(cachedScript).toContain("WORKOUT_DATA");
+
+    let revalidationRequests = 0;
+    let fulfillPromise = Promise.resolve();
+    await context.route("**/workout.js", (route) => {
+      revalidationRequests += 1;
+      fulfillPromise = route.fulfill({
+        status: 200,
+        contentType: "text/html",
+        body: "<!DOCTYPE html><title>Captive portal</title><p>Sign in to continue</p>"
+      });
+      return fulfillPromise;
+    });
+
+    await page.reload();
+    await page.waitForLoadState("networkidle");
+    await expect.poll(() => revalidationRequests).toBeGreaterThan(0);
+    await fulfillPromise;
+
+    const revalidatedScript = await readCachedScript();
+    expect(revalidatedScript).toContain("WORKOUT_DATA");
+    expect(revalidatedScript).not.toContain("Captive portal");
   });
 
   test("full page final state screenshot", async ({ page }) => {
