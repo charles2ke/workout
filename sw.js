@@ -1,10 +1,10 @@
 // Service worker for offline use in the gym.
 //
 // The app shell is precached on install and then served cache-first, with a
-// background refresh that keeps the cached copy up to date. Anything else
-// (provider API calls) goes
-// straight to the network and is never cached — health data and OAuth
-// responses must not be stored by the worker.
+// background revalidation that refreshes the cache for the next load. A flaky
+// gym connection therefore never delays a reload. Anything else (provider API
+// calls) goes straight to the network and is never cached — health data and
+// OAuth responses must not be stored by the worker.
 
 // Replaced with a content hash of the app shell by scripts/build-dist.mjs at
 // build time, so a deploy with changed assets always gets a fresh cache and
@@ -17,11 +17,6 @@ const APP_SHELL = [
   "./index.html",
   "./workout.html",
   "./fitness.html",
-  // Static hosts (and the `serve` dev server) redirect "/page.html" to the
-  // extensionless "/page", so an installed app can be launched there. Precache
-  // both spellings or an offline launch at the clean URL is never intercepted.
-  "./workout",
-  "./fitness",
   "./styles.css",
   "./workout.css",
   "./fitness.css",
@@ -36,12 +31,68 @@ const APP_SHELL = [
   "./icon-192.png",
   "./icon-512.png"
 ];
+// Static hosts (and the `serve` dev server) redirect "/page.html" to the
+// extensionless "/page", so an installed app can be launched there. Precache
+// both spellings or an offline launch at the clean URL is never intercepted.
+// These are best-effort: hosts that only serve the ".html" spelling would
+// otherwise fail every install.
+const OPTIONAL_SHELL = ["./workout", "./fitness"];
+
+// Offline navigations fall back to the document for the requested route, so
+// "/fitness" never opens the workout page.
+const NAVIGATION_FALLBACKS = [
+  { match: /(^|\/)fitness(\.html)?$/, document: "./fitness.html" },
+  { match: /(^|\/)workout(\.html)?$/, document: "./workout.html" }
+];
+const DEFAULT_FALLBACK = "./index.html";
+
 const APP_SHELL_URLS = new Set(
-  APP_SHELL.map((path) => {
+  APP_SHELL.concat(OPTIONAL_SHELL).map((path) => {
     const url = new URL(path, self.location.href);
     return `${url.origin}${url.pathname}`;
   })
 );
+// Every APP_SHELL and OPTIONAL_SHELL URL must match a rule so new cached asset
+// types choose their validation intentionally.
+const SHELL_RESPONSE_RULES = [
+  { match: /^fitness(\.html)?$/, types: ["text/html"], includes: "My Fitness" },
+  { match: /^workout(\.html)?$/, types: ["text/html"], includes: "7-Day Longevity" },
+  { match: /^(index\.html)?$/, types: ["text/html"], includes: "workout.html" },
+  { match: /\.css$/, types: ["text/css"] },
+  { match: /\.js$/, types: ["application/javascript", "text/javascript"] },
+  { match: /\.webmanifest$/, types: ["application/manifest+json", "application/json"] },
+  { match: /\.svg$/, types: ["image/svg+xml"] },
+  { match: /\.png$/, types: ["image/png"] }
+];
+
+function fallbackDocumentFor(pathname) {
+  const route = NAVIGATION_FALLBACKS.find(({ match }) => match.test(pathname));
+  return route ? route.document : DEFAULT_FALLBACK;
+}
+
+function shellPathFor(url) {
+  const scopePath = new URL("./", self.location.href).pathname;
+  const { pathname } = new URL(url, self.location.href);
+  return pathname.startsWith(scopePath) ? pathname.slice(scopePath.length) : null;
+}
+
+function shellResponseRule(url) {
+  const shellPath = shellPathFor(url);
+  return shellPath === null ? null : SHELL_RESPONSE_RULES.find(({ match }) => match.test(shellPath));
+}
+
+async function validateShellResponse(url, response, stage) {
+  if (!response.ok || response.type !== "basic") throw new Error(`Failed during ${stage} of ${url}: ${response.status}`);
+  const rule = shellResponseRule(url);
+  if (!rule) throw new Error(`No shell validation rule during ${stage} of ${url}`);
+
+  const contentType = response.headers.get("content-type") || "";
+  const mediaType = contentType.split(";")[0].trim().toLowerCase();
+  if (!rule.types.includes(mediaType)) throw new Error(`Unexpected content type during ${stage} of ${url}: ${contentType}`);
+  if (rule.includes && !(await response.clone().text()).includes(rule.includes)) {
+    throw new Error(`Unexpected shell content during ${stage} of ${url}`);
+  }
+}
 
 // Replaying a redirected response for a navigation request makes the browser
 // abort with a "redirected response" error, and some static hosts redirect
@@ -61,18 +112,24 @@ function unredirect(response) {
   });
 }
 
+async function precache(cache, url) {
+  const response = await fetch(url, { cache: "reload" });
+  await validateShellResponse(url, response, "precache");
+  const clean = await unredirect(response);
+  await cache.put(url, clean);
+}
+
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
       .open(CACHE_NAME)
-      // A single missing file must not break the whole install.
       .then((cache) =>
-        Promise.allSettled(
-          APP_SHELL.map((url) =>
-            fetch(url, { cache: "reload" }).then((response) =>
-              response.ok ? unredirect(response).then((clean) => cache.put(url, clean)) : null
-            )
-          )
+        // The required shell is cached atomically: if any of it fails the
+        // install fails, the worker never activates and the previous complete
+        // cache is left untouched. Only the optional clean-URL aliases are
+        // allowed to fail.
+        Promise.all(APP_SHELL.map((url) => precache(cache, url))).then(() =>
+          Promise.allSettled(OPTIONAL_SHELL.map((url) => precache(cache, url)))
         )
       )
       .then(() => self.skipWaiting())
@@ -83,7 +140,7 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))))
+.then((keys) => Promise.all(keys.filter((key) => key.startsWith("workout-shell-") && key !== CACHE_NAME).map((key) => caches.delete(key))))
       .then(() => self.clients.claim())
   );
 });
@@ -96,31 +153,35 @@ self.addEventListener("fetch", (event) => {
   const cacheUrl = `${url.origin}${url.pathname}`;
   if (!APP_SHELL_URLS.has(cacheUrl)) return;
 
+  // Cache-first: an installed shell renders immediately even on a captive or
+  // very slow gym connection. The network copy is fetched in the background and
+  // stored for the next load.
+  const revalidate = fetch(request)
+    .then(async (response) => {
+      await validateShellResponse(cacheUrl, response, "revalidate");
+
+      const clean = await unredirect(response);
+      const cache = await caches.open(CACHE_NAME);
+      await cache.put(cacheUrl, clean.clone());
+      return clean;
+    })
+    .catch(() => undefined);
+
   event.respondWith(
-    caches.match(cacheUrl).then((cached) => {
-      const fromNetwork = fetch(request).then(async (response) => {
-        if (!response.ok || response.type !== "basic") throw new Error("Response not cacheable");
-
-        const clean = await unredirect(response);
-        const cache = await caches.open(CACHE_NAME);
-        await cache.put(cacheUrl, clean.clone());
-        return clean;
-      });
-
-      // Cache-first: serve the precached shell immediately and refresh it in
-      // the background so the next load picks up any deployed change.
+    caches.match(cacheUrl).then(async (cached) => {
       if (cached) {
-        event.waitUntil(fromNetwork.catch(() => undefined));
+        event.waitUntil(revalidate);
         return cached;
       }
 
-      return fromNetwork.catch(() => {
-        // Only navigations get a generic HTML fallback. Falling back to
-        // workout.html for a missing script/stylesheet/manifest would make
-        // the browser try to parse HTML as that asset and fail to render.
-        if (request.mode === "navigate") return caches.match("./workout.html");
-        return undefined;
-      });
+      const fresh = await revalidate;
+      if (fresh) return fresh;
+      // Only navigations get an HTML fallback, and it is the document for the
+      // requested route. Falling back to a page for a missing
+      // script/stylesheet/manifest would make the browser try to parse HTML as
+      // that asset and fail to render.
+      if (request.mode === "navigate") return caches.match(fallbackDocumentFor(url.pathname));
+      return undefined;
     })
   );
 });
