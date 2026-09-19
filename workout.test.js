@@ -714,6 +714,16 @@ describe("workout.js", () => {
       expect(window.AudioContext).toHaveBeenCalled();
     });
 
+    test("finishing an already resting exercise's round is ignored", () => {
+      const panel = panels()[0];
+      panel.querySelector(".rest-start").click();
+      panel.querySelector(".rest-start").click();
+
+      expect(statusOf(panel)).toContain("Round 1 of 3 done");
+      jest.advanceTimersByTime(90000);
+      expect(statusOf(panel)).toContain("start round 2 of 3");
+    });
+
     test("the rest timer stops after the final round", () => {
       const panel = panels()[0];
       const start = panel.querySelector(".rest-start");

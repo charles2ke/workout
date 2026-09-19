@@ -878,6 +878,7 @@ function stopActiveRest() {
 }
 
 function startRestAfterRound(panel) {
+  if (activeRest?.panel === panel) return;
   stopActiveRest();
 
   const { rounds, restSeconds, round } = restPanelState(panel);
