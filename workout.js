@@ -19,6 +19,7 @@ const WORKOUT_DATA = [
         notes: "Retract shoulder blades; elbows tucked at 45°.",
         difficulty: "Moderate",
         restSeconds: 90,
+        rounds: 3,
         illustration: "press"
       },
       {
@@ -28,6 +29,7 @@ const WORKOUT_DATA = [
         notes: "Drive with elbows down smoothly to upper chest.",
         difficulty: "Moderate",
         restSeconds: 90,
+        rounds: 3,
         illustration: "pull"
       }
     ]
@@ -46,6 +48,7 @@ const WORKOUT_DATA = [
         notes: "Upright chest, sit between hips, knees out.",
         difficulty: "Moderate",
         restSeconds: 90,
+        rounds: 3,
         illustration: "squat"
       }
     ]
@@ -64,6 +67,7 @@ const WORKOUT_DATA = [
         notes: "Brisk walk, light cycling, or light rowing.",
         difficulty: "Easy",
         restSeconds: 30,
+        rounds: 1,
         illustration: "cardio"
       }
     ]
@@ -82,6 +86,7 @@ const WORKOUT_DATA = [
         notes: "Pull dumbbell to hip, keeping elbow close.",
         difficulty: "Moderate",
         restSeconds: 60,
+        rounds: 3,
         illustration: "row"
       }
     ]
@@ -100,6 +105,7 @@ const WORKOUT_DATA = [
         notes: "Keep front foot flat; controls hip stability.",
         difficulty: "Hard",
         restSeconds: 90,
+        rounds: 3,
         illustration: "split"
       }
     ]
@@ -118,6 +124,7 @@ const WORKOUT_DATA = [
         notes: "Explode from the hips; power comes from glutes.",
         difficulty: "Moderate",
         restSeconds: 45,
+        rounds: 3,
         illustration: "swing"
       }
     ]
@@ -136,6 +143,7 @@ const WORKOUT_DATA = [
         notes: "Focus on upper back, quads, and calves.",
         difficulty: "Easy",
         restSeconds: 30,
+        rounds: 1,
         illustration: "recovery"
       }
     ]
@@ -149,7 +157,7 @@ const Common = (typeof window !== "undefined" && window.WorkoutCommon) || requir
 /* istanbul ignore next -- browser global in the page, require() under Jest */
 const Log = (typeof window !== "undefined" && window.WorkoutLog) || require("./workout-log.js");
 
-const { storage, getLocalDateKey, formatSeconds, createElement } = Common;
+const { storage, getLocalDateKey, formatSeconds, createElement, toNumber, loadPrefs } = Common;
 const {
   LOG_FIELDS,
   exerciseKey,
@@ -259,9 +267,6 @@ function createSvg(illustration, titleText) {
 // ===== UI Rendering =====
 const tabsNav = document.getElementById("day-tabs");
 const workoutContent = document.getElementById("workout-content");
-const notesToggle = document.getElementById("toggle-notes");
-const difficultyToggle = document.getElementById("toggle-difficulty");
-const animationToggle = document.getElementById("toggle-animation");
 const nameInput = document.getElementById("name-input");
 const ageInput = document.getElementById("age-input");
 const ethnicityInput = document.getElementById("ethnicity-input");
@@ -289,6 +294,22 @@ function lastPerformanceText(key, todayKey, legacyKey) {
   return `Last time (${previous.dateKey}): ${formatPerformance(previous.entry)}`;
 }
 
+// One side of a counter-style control: taps adjust the sibling number input by
+// a single step and re-use the existing change handler to persist the value.
+function createStepperButton(field, delta, label, exerciseName) {
+  const decreasing = delta < 0;
+  return createElement("button", {
+    className: `stepper-btn${decreasing ? " decrease" : " increase"}`,
+    text: decreasing ? "\u2212" : "+",
+    attrs: {
+      type: "button",
+      "data-step-field": field,
+      "data-step-delta": String(delta),
+      "aria-label": `${decreasing ? "Decrease" : "Increase"} ${label.toLowerCase()} for ${exerciseName}`
+    }
+  });
+}
+
 // Builds the per-exercise log controls: a done checkbox, the sets/reps/weight
 // actually performed, and what to beat from the last time it was recorded.
 // The exercise name goes into every accessible name so a screen-reader user
@@ -302,7 +323,7 @@ function createLogControls(exerciseName, key, todayKey, legacyKey) {
   });
   checkbox.checked = entry.done;
 
-  const fields = LOG_FIELDS.map(({ field, label, min, max, step }) => {
+  const fields = LOG_FIELDS.map(({ field, label, min, max, step, counter }) => {
     const input = createElement("input", {
       className: "log-input",
       attrs: {
@@ -316,7 +337,16 @@ function createLogControls(exerciseName, key, todayKey, legacyKey) {
       }
     });
     input.value = entry[field] === null ? "" : String(entry[field]);
-    return createElement("label", { className: "log-field", text: label, children: [input] });
+    // Whole-number fields get counter-style steppers so a set or rep can be
+    // added with one tap mid-workout instead of typing into a number field.
+    const children = counter
+      ? [createStepperButton(field, -step, label, exerciseName), input, createStepperButton(field, step, label, exerciseName)]
+      : [input];
+    return createElement("label", {
+      className: counter ? "log-field log-counter" : "log-field",
+      text: label,
+      children
+    });
   });
 
   return createElement("div", {
@@ -325,6 +355,58 @@ function createLogControls(exerciseName, key, todayKey, legacyKey) {
       createElement("label", { className: "log-done", text: "Done", children: [checkbox] }),
       createElement("div", { className: "log-fields", children: fields }),
       createElement("p", { className: "log-last", text: lastPerformanceText(key, todayKey, legacyKey) })
+    ]
+  });
+}
+
+// Per-exercise rest timer: the athlete taps "Round done" after finishing a
+// round (set) and the countdown for that exercise's own rest interval starts,
+// repeating until every round of the exercise is complete.
+function createRestTimer(exercise) {
+  // Every exercise in WORKOUT_DATA declares both values.
+  const rounds = Number(exercise.rounds);
+  const restSeconds = Number(exercise.restSeconds);
+
+  const display = createElement("p", {
+    className: "rest-display",
+    text: formatSeconds(restSeconds),
+    attrs: { role: "timer", "aria-label": `Rest remaining for ${exercise.name}` }
+  });
+
+  const startButton = createElement("button", {
+    className: "button rest-start",
+    text: "Round done \u2014 rest",
+    attrs: { type: "button", "data-rest-start": "", "aria-label": `Finish a round of ${exercise.name} and start the rest timer` }
+  });
+
+  const skipButton = createElement("button", {
+    className: "button secondary rest-skip",
+    text: "Skip rest",
+    attrs: { type: "button", "data-rest-skip": "", "aria-label": `Skip the rest timer for ${exercise.name}` }
+  });
+  skipButton.disabled = true;
+
+  return createElement("div", {
+    className: "exercise-rest",
+    attrs: {
+      "data-rest-seconds": String(restSeconds),
+      "data-rest-rounds": String(rounds),
+      "data-rest-round": "0"
+    },
+    children: [
+      createElement("div", {
+        className: "rest-head",
+        children: [
+          createElement("h4", { className: "rest-title", text: `Rest timer \u00b7 ${restSeconds}s` }),
+          display
+        ]
+      }),
+      createElement("div", { className: "rest-actions", children: [startButton, skipButton] }),
+      createElement("p", {
+        className: "rest-status",
+        text: `Round 1 of ${rounds} \u2014 tap when the round is done.`,
+        attrs: { role: "status" }
+      })
     ]
   });
 }
@@ -349,6 +431,8 @@ function renderTabs(days) {
 }
 
 function renderDays(days) {
+  // Any running rest timer belongs to a card that is about to be replaced.
+  stopActiveRest();
   const fragment = document.createDocumentFragment();
   const todayKey = getLocalDateKey();
 
@@ -437,7 +521,8 @@ function renderDays(days) {
         difficulty,
         notes,
         copyButton,
-        createLogControls(exercise.name, key, todayKey, legacyKey)
+        createLogControls(exercise.name, key, todayKey, legacyKey),
+        createRestTimer(exercise)
       );
       card.append(svgContainer, info);
       grid.appendChild(card);
@@ -651,16 +736,18 @@ clearTodayButton.addEventListener("click", () => {
   refreshLogViews();
 });
 
+// Display preferences are edited on the settings page, so they are read back
+// from storage here — on load and whenever the page is shown again (including
+// when it comes back from the browser's back/forward cache after a settings
+// change).
 function applyVisibilityPreferences() {
-  workoutContent.classList.toggle("hidden-notes", !notesToggle.checked);
-  workoutContent.classList.toggle("hidden-difficulty", !difficultyToggle.checked);
-  workoutContent.classList.toggle("no-animation", !animationToggle.checked);
-  storage.set("prefs", {
-    showNotes: notesToggle.checked,
-    showDifficulty: difficultyToggle.checked,
-    animate: animationToggle.checked
-  });
+  const prefs = loadPrefs();
+  workoutContent.classList.toggle("hidden-notes", !prefs.showNotes);
+  workoutContent.classList.toggle("hidden-difficulty", !prefs.showDifficulty);
+  workoutContent.classList.toggle("no-animation", !prefs.animate);
 }
+
+window.addEventListener("pageshow", applyVisibilityPreferences);
 
 function applyProfilePreferences() {
   storage.set("profile", {
@@ -677,9 +764,6 @@ ageInput.addEventListener("input", applyProfilePreferences);
 ethnicityInput.addEventListener("change", applyProfilePreferences);
 heightInput.addEventListener("input", applyProfilePreferences);
 weightInput.addEventListener("input", applyProfilePreferences);
-notesToggle.addEventListener("change", applyVisibilityPreferences);
-difficultyToggle.addEventListener("change", applyVisibilityPreferences);
-animationToggle.addEventListener("change", applyVisibilityPreferences);
 
 const PROFILE_DEFAULTS = { name: "Tito", age: "42", ethnicity: "Indian", height: "5'11\"", weight: "77" };
 
@@ -762,6 +846,110 @@ function startTimer() {
 startTimerButton.addEventListener("click", startTimer);
 stopTimerButton.addEventListener("click", () => stopTimer());
 
+// ===== Per-exercise rest timers =====
+// Only one rest timer runs at a time: starting a rest anywhere stops the one
+// that was already counting down, so the page never ticks two countdowns.
+let activeRest = null;
+
+function restPanelState(panel) {
+  return {
+    rounds: Number(panel.dataset.restRounds),
+    restSeconds: Number(panel.dataset.restSeconds),
+    round: Number(panel.dataset.restRound)
+  };
+}
+
+function setRestStatus(panel, text, kind = "") {
+  const status = panel.querySelector(".rest-status");
+  status.textContent = text;
+  status.className = `rest-status${kind ? ` ${kind}` : ""}`;
+}
+
+function setRestDisplay(panel, seconds) {
+  panel.querySelector(".rest-display").textContent = formatSeconds(seconds);
+}
+
+function stopActiveRest() {
+  if (!activeRest) return;
+  clearInterval(activeRest.handle);
+  activeRest.panel.classList.remove("resting");
+  activeRest.panel.querySelector(".rest-skip").disabled = true;
+  activeRest = null;
+}
+
+function startRestAfterRound(panel) {
+  stopActiveRest();
+
+  const { rounds, restSeconds, round } = restPanelState(panel);
+  const completedRounds = round + 1;
+  panel.dataset.restRound = String(completedRounds);
+
+  if (completedRounds >= rounds) {
+    setRestDisplay(panel, 0);
+    setRestStatus(panel, `All ${rounds} round(s) complete — no rest needed.`, "done");
+    panel.querySelector(".rest-start").disabled = true;
+    return;
+  }
+
+  let remainingRestSeconds = restSeconds;
+  setRestDisplay(panel, remainingRestSeconds);
+  setRestStatus(panel, `Round ${completedRounds} of ${rounds} done — resting…`);
+  panel.classList.add("resting");
+  panel.querySelector(".rest-skip").disabled = false;
+
+  const handle = window.setInterval(() => {
+    remainingRestSeconds -= 1;
+    setRestDisplay(panel, remainingRestSeconds);
+
+    if (remainingRestSeconds <= 0) {
+      stopActiveRest();
+      setRestStatus(panel, `Rest complete — start round ${completedRounds + 1} of ${rounds}.`, "done");
+      playNotificationTone();
+    }
+  }, 1000);
+
+  activeRest = { panel, handle };
+}
+
+function skipRest(panel) {
+  const { rounds, round } = restPanelState(panel);
+  stopActiveRest();
+  setRestDisplay(panel, 0);
+  setRestStatus(panel, `Rest skipped — start round ${round + 1} of ${rounds}.`);
+}
+
+workoutContent.addEventListener("click", (event) => {
+  const restStart = event.target.closest("[data-rest-start]");
+  if (restStart) {
+    startRestAfterRound(restStart.closest(".exercise-rest"));
+    return;
+  }
+
+  const restSkip = event.target.closest("[data-rest-skip]");
+  if (restSkip) {
+    skipRest(restSkip.closest(".exercise-rest"));
+  }
+});
+
+// ===== Counter-style sets/reps =====
+workoutContent.addEventListener("click", (event) => {
+  const stepper = event.target.closest("[data-step-delta]");
+  if (!stepper) {
+    return;
+  }
+
+  const field = stepper.dataset.stepField;
+  const spec = LOG_FIELDS.find((candidate) => candidate.field === field);
+  const input = stepper.closest(".log-field").querySelector(".log-input");
+  const current = toNumber(input.value);
+  const next = Math.min(spec.max, Math.max(spec.min, (current === null ? 0 : current) + Number(stepper.dataset.stepDelta)));
+
+  input.value = String(next);
+  input.classList.remove("is-invalid");
+  input.setAttribute("aria-invalid", "false");
+  input.dispatchEvent(new Event("change", { bubbles: true }));
+});
+
 // ===== Initialization =====
 function initWorkoutProgram() {
   /* istanbul ignore next */
@@ -775,10 +963,6 @@ function initWorkoutProgram() {
   renderTabs(WORKOUT_DATA);
   renderDays(WORKOUT_DATA);
 
-  const savedPrefs = storage.get("prefs", { showNotes: true, showDifficulty: true, animate: true });
-  notesToggle.checked = Boolean(savedPrefs.showNotes);
-  difficultyToggle.checked = Boolean(savedPrefs.showDifficulty);
-  animationToggle.checked = savedPrefs.animate !== false;
   applyVisibilityPreferences();
 
   const savedProfile = storage.get("profile", {

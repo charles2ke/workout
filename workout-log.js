@@ -13,8 +13,8 @@ const { storage, getLocalDateKey, shiftDateKey, toNumber } = (typeof window !== 
 const WORKOUT_LOG_KEY = "workoutLog";
 const MAX_HISTORY_DAYS = 14;
 const LOG_FIELDS = [
-  { field: "sets", label: "Sets", min: 0, max: 99, step: 1 },
-  { field: "reps", label: "Reps", min: 0, max: 999, step: 1 },
+  { field: "sets", label: "Sets", min: 0, max: 99, step: 1, counter: true },
+  { field: "reps", label: "Reps", min: 0, max: 999, step: 1, counter: true },
   { field: "weight", label: "kg", min: 0, max: 999, step: 0.5 }
 ];
 const STEP_TOLERANCE_ULPS = 8; // Allows parsing, subtraction and division rounding, but not real off-step gaps.

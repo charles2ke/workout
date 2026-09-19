@@ -225,9 +225,9 @@ describe("workout.js", () => {
 
     test("loads prefs (notes + difficulty off) from localStorage", () => {
       resetAndLoad({ storageData: { prefs: { showNotes: false, showDifficulty: false } } });
-      expect(document.getElementById("toggle-notes").checked).toBe(false);
-      expect(document.getElementById("toggle-difficulty").checked).toBe(false);
-      expect(document.getElementById("workout-content").classList.contains("hidden-notes")).toBe(true);
+      const content = document.getElementById("workout-content");
+      expect(content.classList.contains("hidden-notes")).toBe(true);
+      expect(content.classList.contains("hidden-difficulty")).toBe(true);
     });
 
     test("defaults to today's day when no saved selection exists", () => {
@@ -416,65 +416,32 @@ describe("workout.js", () => {
   // Visibility preferences
   // =========================================================================
   describe("Visibility preferences", () => {
-    beforeEach(() => {
-      resetAndLoad();
+    test("notes and difficulty prefs saved on the settings page are applied", () => {
+      resetAndLoad({ storageData: { prefs: { showNotes: false, showDifficulty: false, animate: true } } });
+      const content = document.getElementById("workout-content");
+      expect(content.classList.contains("hidden-notes")).toBe(true);
+      expect(content.classList.contains("hidden-difficulty")).toBe(true);
+      expect(content.classList.contains("no-animation")).toBe(false);
     });
 
-    test("unchecking notes adds hidden-notes class", () => {
-      const t = document.getElementById("toggle-notes");
-      t.checked = false;
-      dispatchChange(t);
-      expect(document.getElementById("workout-content").classList.contains("hidden-notes")).toBe(true);
-    });
-
-    test("re-checking notes removes hidden-notes class", () => {
-      const t = document.getElementById("toggle-notes");
-      t.checked = false;
-      dispatchChange(t);
-      t.checked = true;
-      dispatchChange(t);
-      expect(document.getElementById("workout-content").classList.contains("hidden-notes")).toBe(false);
-    });
-
-    test("unchecking difficulty adds hidden-difficulty class", () => {
-      const t = document.getElementById("toggle-difficulty");
-      t.checked = false;
-      dispatchChange(t);
-      expect(document.getElementById("workout-content").classList.contains("hidden-difficulty")).toBe(true);
-    });
-
-    test("prefs are persisted to localStorage", () => {
-      const notesToggle = document.getElementById("toggle-notes");
-      notesToggle.checked = false;
-      dispatchChange(notesToggle);
-
-      const saved = JSON.parse(localStorage.getItem("prefs"));
-      expect(saved.showNotes).toBe(false);
-      expect(saved.showDifficulty).toBe(true);
-      expect(saved.animate).toBe(true);
-    });
-
-    test("unchecking animation adds no-animation class and persists", () => {
-      const t = document.getElementById("toggle-animation");
-      t.checked = false;
-      dispatchChange(t);
-      expect(document.getElementById("workout-content").classList.contains("no-animation")).toBe(true);
-      expect(JSON.parse(localStorage.getItem("prefs")).animate).toBe(false);
-    });
-
-    test("re-checking animation removes no-animation class", () => {
-      const t = document.getElementById("toggle-animation");
-      t.checked = false;
-      dispatchChange(t);
-      t.checked = true;
-      dispatchChange(t);
-      expect(document.getElementById("workout-content").classList.contains("no-animation")).toBe(false);
-    });
-
-    test("animation preference is restored from localStorage", () => {
+    test("animation preference is applied from storage", () => {
       resetAndLoad({ storageData: { prefs: { showNotes: true, showDifficulty: true, animate: false } } });
-      expect(document.getElementById("toggle-animation").checked).toBe(false);
       expect(document.getElementById("workout-content").classList.contains("no-animation")).toBe(true);
+    });
+
+    test("defaults to everything visible when nothing is saved", () => {
+      resetAndLoad();
+      const content = document.getElementById("workout-content");
+      expect(content.classList.contains("hidden-notes")).toBe(false);
+      expect(content.classList.contains("hidden-difficulty")).toBe(false);
+      expect(content.classList.contains("no-animation")).toBe(false);
+    });
+
+    test("pageshow re-applies preferences changed on the settings page", () => {
+      resetAndLoad();
+      localStorage.setItem("prefs", JSON.stringify({ showNotes: false, showDifficulty: true, animate: true }));
+      window.dispatchEvent(new Event("pageshow"));
+      expect(document.getElementById("workout-content").classList.contains("hidden-notes")).toBe(true);
     });
   });
 
@@ -640,6 +607,176 @@ describe("workout.js", () => {
       document.getElementById("rest-seconds").value = "60";
       document.getElementById("start-timer").click();
       expect(JSON.parse(localStorage.getItem("timerSeconds"))).toBe(60);
+    });
+  });
+
+  // =========================================================================
+  // Counter-style sets/reps steppers
+  // =========================================================================
+  describe("Sets and reps counters", () => {
+    beforeEach(() => {
+      resetAndLoad();
+      document.getElementById("tab-mon").click();
+    });
+
+    const activeCard = () => document.querySelector(".day-section.active .exercise-card");
+    const stepper = (card, field, direction) =>
+      card.querySelector(`[data-step-field="${field}"].${direction}`);
+
+    test("sets and reps get steppers but weight stays a plain input", () => {
+      const card = activeCard();
+      expect(card.querySelectorAll("[data-step-field='sets']").length).toBe(2);
+      expect(card.querySelectorAll("[data-step-field='reps']").length).toBe(2);
+      expect(card.querySelectorAll("[data-step-field='weight']").length).toBe(0);
+      expect(stepper(card, "sets", "increase").getAttribute("aria-label")).toContain("Increase sets");
+      expect(stepper(card, "sets", "decrease").getAttribute("aria-label")).toContain("Decrease sets");
+    });
+
+    test("increase starts an empty field at one step and persists it", () => {
+      const card = activeCard();
+      stepper(card, "sets", "increase").click();
+      const input = card.querySelector("[data-log-field='sets']");
+      expect(input.value).toBe("1");
+
+      const log = JSON.parse(localStorage.getItem("workoutLog"));
+      expect(log[Object.keys(log)[0]].entries[card.dataset.exerciseKey].sets).toBe(1);
+    });
+
+    test("increase adds to an existing value", () => {
+      const card = activeCard();
+      const input = card.querySelector("[data-log-field='reps']");
+      input.value = "8";
+      stepper(card, "reps", "increase").click();
+      expect(input.value).toBe("9");
+    });
+
+    test("decrease never goes below the minimum and clears the invalid state", () => {
+      const card = activeCard();
+      const input = card.querySelector("[data-log-field='sets']");
+      input.classList.add("is-invalid");
+      stepper(card, "sets", "decrease").click();
+      expect(input.value).toBe("0");
+      expect(input.classList.contains("is-invalid")).toBe(false);
+      expect(input.getAttribute("aria-invalid")).toBe("false");
+    });
+
+    test("increase never goes above the maximum", () => {
+      const card = activeCard();
+      const input = card.querySelector("[data-log-field='sets']");
+      input.value = "99";
+      stepper(card, "sets", "increase").click();
+      expect(input.value).toBe("99");
+    });
+
+    test("clicks elsewhere in the card are ignored by the stepper handler", () => {
+      const card = activeCard();
+      card.querySelector(".exercise-title").click();
+      expect(card.querySelector("[data-log-field='sets']").value).toBe("");
+    });
+  });
+
+  // =========================================================================
+  // Per-exercise rest timers
+  // =========================================================================
+  describe("Per-exercise rest timer", () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+      resetAndLoad();
+      document.getElementById("tab-mon").click();
+    });
+
+    const panels = () => Array.from(document.querySelectorAll(".day-section.active .exercise-rest"));
+    const statusOf = (panel) => panel.querySelector(".rest-status").textContent;
+
+    test("each exercise card gets its own rest timer seeded from the plan", () => {
+      const panel = panels()[0];
+      expect(panel.dataset.restSeconds).toBe("90");
+      expect(panel.dataset.restRounds).toBe("3");
+      expect(panel.querySelector(".rest-display").textContent).toBe("01:30");
+      expect(statusOf(panel)).toContain("Round 1 of 3");
+    });
+
+    test("finishing a round starts the rest countdown and completes with a tone", () => {
+      const panel = panels()[0];
+      panel.querySelector(".rest-start").click();
+      expect(statusOf(panel)).toContain("Round 1 of 3 done");
+      expect(panel.classList.contains("resting")).toBe(true);
+      expect(panel.querySelector(".rest-skip").disabled).toBe(false);
+
+      jest.advanceTimersByTime(30000);
+      expect(panel.querySelector(".rest-display").textContent).toBe("01:00");
+
+      jest.advanceTimersByTime(60000);
+      expect(panel.querySelector(".rest-display").textContent).toBe("00:00");
+      expect(statusOf(panel)).toContain("start round 2 of 3");
+      expect(panel.classList.contains("resting")).toBe(false);
+      expect(panel.querySelector(".rest-skip").disabled).toBe(true);
+      expect(window.AudioContext).toHaveBeenCalled();
+    });
+
+    test("the rest timer stops after the final round", () => {
+      const panel = panels()[0];
+      const start = panel.querySelector(".rest-start");
+      start.click();
+      jest.advanceTimersByTime(90000);
+      start.click();
+      jest.advanceTimersByTime(90000);
+      start.click();
+
+      expect(statusOf(panel)).toContain("All 3 round(s) complete");
+      expect(start.disabled).toBe(true);
+      expect(panel.querySelector(".rest-display").textContent).toBe("00:00");
+    });
+
+    test("a single-round exercise completes without resting", () => {
+      document.getElementById("tab-wed").click();
+      const panel = panels()[0];
+      panel.querySelector(".rest-start").click();
+      expect(statusOf(panel)).toContain("All 1 round(s) complete");
+      expect(panel.classList.contains("resting")).toBe(false);
+    });
+
+    test("skipping the rest stops the countdown", () => {
+      const panel = panels()[0];
+      panel.querySelector(".rest-start").click();
+      jest.advanceTimersByTime(5000);
+      panel.querySelector(".rest-skip").click();
+      expect(statusOf(panel)).toContain("Rest skipped");
+      expect(panel.querySelector(".rest-display").textContent).toBe("00:00");
+
+      jest.advanceTimersByTime(90000);
+      expect(panel.querySelector(".rest-display").textContent).toBe("00:00");
+    });
+
+    test("skipping when nothing is running is harmless", () => {
+      const panel = panels()[0];
+      panel.querySelector(".rest-skip").disabled = false;
+      panel.querySelector(".rest-skip").click();
+      expect(statusOf(panel)).toContain("start round 1 of 3");
+    });
+
+    test("starting a second exercise's rest stops the first countdown", () => {
+      const [first, second] = panels();
+      first.querySelector(".rest-start").click();
+      second.querySelector(".rest-start").click();
+
+      jest.advanceTimersByTime(10000);
+      expect(first.querySelector(".rest-display").textContent).toBe("01:30");
+      expect(second.querySelector(".rest-display").textContent).toBe("01:20");
+    });
+
+    test("re-rendering the day cancels the running rest timer", () => {
+      panels()[0].querySelector(".rest-start").click();
+      document.getElementById("clear-today-log").disabled = false;
+      document.getElementById("clear-today-log").click();
+      jest.advanceTimersByTime(90000);
+      expect(panels()[0].querySelector(".rest-display").textContent).toBe("01:30");
+    });
+
+    test("clicks that are not rest controls are ignored", () => {
+      const panel = panels()[0];
+      panel.querySelector(".rest-title").click();
+      expect(statusOf(panel)).toContain("Round 1 of 3");
     });
   });
 

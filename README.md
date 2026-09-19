@@ -14,6 +14,7 @@ A lightweight, dependency-free weekly workout planner. No frameworks, no bundler
 
 - **Workout Program** (`workout.html`) — the 7-day training plan
 - **My Fitness** (`fitness.html`) — health dashboard that connects to the Google Health and Garmin APIs (or imports their export files)
+- **Settings** (`settings.html`) — display options for the workout program page
 
 ## Features
 
@@ -21,9 +22,10 @@ A lightweight, dependency-free weekly workout planner. No frameworks, no bundler
 
 - **7-day program** — structured daily workouts covering upper body push/pull, lower body, active recovery, hypertrophy, posterior chain, full-body conditioning, and rest
 - **Exercise cards** — each card shows sets/reps, difficulty, coaching notes, and an animated inline SVG illustration of the movement
-- **Rest timer** — configurable countdown timer with an audio notification tone when rest is complete
+- **Rest timer** — a configurable countdown at the top of the page, plus a per-exercise timer on every card that starts the exercise's own rest interval after each round and counts the rounds down to the last one, with an audio notification tone when rest is complete
 - **Editable profile** — inline fields for name, age, ethnicity, height, and weight, persisted in `localStorage`
-- **Display toggles** — show/hide exercise notes and difficulty labels, and turn exercise animations on/off (animations are also disabled automatically when the system prefers reduced motion)
+- **Sets & reps counters** — the sets and reps logged for an exercise are stepped up or down with − / + buttons instead of typing
+- **Display toggles** — on the settings page: show/hide exercise notes and difficulty labels, and turn exercise animations on/off (animations are also disabled automatically when the system prefers reduced motion)
 - **Workout logging** — tick each exercise done and record the sets, reps and weight you actually performed; every day's session is stored in `localStorage` under the local calendar date
 - **Progression** — each card shows "Last time: 3×8 @ 20 kg" from your most recent logged session of that exercise, so there is always a number to beat
 - **Progress & history** — a per-day "Today: 2 of 6 exercises" line, a current-streak counter, a rolling history of recent sessions, and a "Clear today's log" reset
@@ -73,6 +75,7 @@ Tokens are refreshed automatically while a refresh token is available.
 index.html         redirects to workout.html
 workout.html, workout.js  7-day training program (UI)
 fitness.html, fitness.js  health dashboard (UI)
+settings.html, settings.js  display settings for the program page (UI)
 common.js          storage, date-key and DOM helpers shared by both pages
 workout-log.js     workout log: entries, progression, streak, history (pure)
 fitness-core.js    parsing, CSV/JSON import, provider adapters, summaries (pure)

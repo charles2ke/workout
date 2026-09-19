@@ -13,6 +13,8 @@ const WEB_ASSETS = [
   "fitness.html",
   "fitness.css",
   "fitness.js",
+  "settings.html",
+  "settings.js",
   "common.js",
   "workout-log.js",
   "fitness-core.js",

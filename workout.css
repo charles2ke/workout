@@ -349,6 +349,7 @@
   .nav-tabs,
   .copy-btn,
   .exercise-log,
+  .exercise-rest,
   .history-panel {
     display: none !important;
   }
@@ -436,6 +437,80 @@
   border-color: var(--danger);
   outline: 1px solid var(--danger);
 }
+
+.log-counter {
+  gap: 4px;
+}
+
+.stepper-btn {
+  min-width: 36px;
+  min-height: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-color);
+  color: var(--text-main);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.stepper-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.stepper-btn:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* ===== Per-exercise rest timer ===== */
+.exercise-rest {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rest-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.rest-title {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.rest-display {
+  font-size: 1.2rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+
+.exercise-rest.resting .rest-display {
+  color: var(--success);
+}
+
+.rest-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rest-status {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  min-height: 1.2em;
+}
+
+.rest-status.done { color: var(--success); }
 
 .log-last {
   font-size: 0.8rem;

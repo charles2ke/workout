@@ -4,7 +4,7 @@ module.exports = {
   testPathIgnorePatterns: ["/node_modules/", "/tests/e2e/"],
   // Every hand-written module is covered; sw.js and sw-register.js are
   // browser-only glue that cannot run under jsdom.
-  collectCoverageFrom: ["common.js", "workout-log.js", "fitness-core.js", "workout.js", "fitness.js"],
+  collectCoverageFrom: ["common.js", "workout-log.js", "fitness-core.js", "workout.js", "fitness.js", "settings.js"],
   coverageThreshold: {
     global: {
       lines: 100,
