@@ -17,6 +17,7 @@ const APP_SHELL = [
   "./index.html",
   "./workout.html",
   "./fitness.html",
+  "./settings.html",
   "./styles.css",
   "./workout.css",
   "./fitness.css",
@@ -25,6 +26,7 @@ const APP_SHELL = [
   "./fitness-core.js",
   "./workout.js",
   "./fitness.js",
+  "./settings.js",
   "./sw-register.js",
   "./manifest.webmanifest",
   "./icon.svg",
@@ -36,12 +38,13 @@ const APP_SHELL = [
 // both spellings or an offline launch at the clean URL is never intercepted.
 // These are best-effort: hosts that only serve the ".html" spelling would
 // otherwise fail every install.
-const OPTIONAL_SHELL = ["./workout", "./fitness"];
+const OPTIONAL_SHELL = ["./workout", "./fitness", "./settings"];
 
 // Offline navigations fall back to the document for the requested route, so
 // "/fitness" never opens the workout page.
 const NAVIGATION_FALLBACKS = [
   { match: /(^|\/)fitness(\.html)?$/, document: "./fitness.html" },
+  { match: /(^|\/)settings(\.html)?$/, document: "./settings.html" },
   { match: /(^|\/)workout(\.html)?$/, document: "./workout.html" }
 ];
 const DEFAULT_FALLBACK = "./index.html";
@@ -56,6 +59,7 @@ const APP_SHELL_URLS = new Set(
 // types choose their validation intentionally.
 const SHELL_RESPONSE_RULES = [
   { match: /^fitness(\.html)?$/, types: ["text/html"], includes: "My Fitness" },
+  { match: /^settings(\.html)?$/, types: ["text/html"], includes: "Display Options" },
   { match: /^workout(\.html)?$/, types: ["text/html"], includes: "7-Day Longevity" },
   { match: /^(index\.html)?$/, types: ["text/html"], includes: "workout.html" },
   { match: /\.css$/, types: ["text/css"] },

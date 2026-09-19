@@ -52,9 +52,13 @@ test.describe("Workout App", () => {
     await page.screenshot({ path: "playwright-screenshots/06-profile-reset.png" });
   });
 
-  test("hide notes toggle removes notes from exercise cards", async ({ page }) => {
-    const toggle = page.locator("#toggle-notes");
-    await toggle.uncheck();
+  test("hiding notes on the settings page hides them on the program page", async ({ page }) => {
+    await page.locator(".page-nav a[href='settings.html']").click();
+    await page.locator("#toggle-notes").uncheck();
+    await page.screenshot({ path: "playwright-screenshots/07a-settings-page.png", fullPage: true });
+
+    await page.goto("/workout.html");
+    await page.waitForLoadState("networkidle");
     await expect(page.locator(".exercise-notes").first()).not.toBeVisible();
     await page.screenshot({ path: "playwright-screenshots/07-notes-hidden.png", fullPage: true });
   });
@@ -93,7 +97,10 @@ test.describe("Workout App", () => {
     expect(runningName).not.toBe("none");
     await page.screenshot({ path: "playwright-screenshots/13-exercise-animation.png", fullPage: true });
 
+    await page.goto("/settings.html");
     await page.locator("#toggle-animation").uncheck();
+    await page.goto("/workout.html");
+    await page.waitForLoadState("networkidle");
     await expect(page.locator("#workout-content")).toHaveClass(/no-animation/);
     const stoppedName = await animated.evaluate((el) => getComputedStyle(el).animationName);
     expect(stoppedName).toBe("none");
@@ -157,6 +164,36 @@ test.describe("Workout App", () => {
     await expect(page.locator(".day-section.active .log-last").first()).toContainText("Last time");
     await expect(page.locator(".day-section.active .log-last").first()).toContainText("3×8 @ 20 kg");
     await page.screenshot({ path: "playwright-screenshots/17-progression-target.png", fullPage: true });
+  });
+
+  test("sets and reps use counter buttons that persist the value", async ({ page }) => {
+    const card = page.locator(".day-section.active .exercise-card").first();
+    await card.locator("[data-step-field='sets'].increase").click();
+    await card.locator("[data-step-field='reps'].increase").click();
+    await card.locator("[data-step-field='reps'].increase").click();
+    await expect(card.locator("[data-log-field='sets']")).toHaveValue("1");
+    await expect(card.locator("[data-log-field='reps']")).toHaveValue("2");
+
+    await card.locator("[data-step-field='reps'].decrease").click();
+    await expect(card.locator("[data-log-field='reps']")).toHaveValue("1");
+    await page.screenshot({ path: "playwright-screenshots/19-sets-reps-counters.png", fullPage: true });
+
+    const stored = await page.evaluate(() => localStorage.getItem("workoutLog"));
+    expect(stored).toContain('"sets":1');
+  });
+
+  test("each exercise has a rest timer that runs between rounds", async ({ page }) => {
+    const rest = page.locator(".day-section.active .exercise-rest").first();
+    await expect(rest.locator(".rest-status")).toContainText("Round 1 of");
+
+    await rest.evaluate((el) => el.setAttribute("data-rest-seconds", "5"));
+    await rest.locator(".rest-start").click();
+    await expect(rest.locator(".rest-status")).toContainText("resting");
+    await expect(rest.locator(".rest-skip")).toBeEnabled();
+    await page.screenshot({ path: "playwright-screenshots/20-rest-timer-running.png", fullPage: true });
+
+    await expect(rest.locator(".rest-status")).toContainText("Rest complete", { timeout: 8000 });
+    await page.screenshot({ path: "playwright-screenshots/21-rest-timer-complete.png", fullPage: true });
   });
 
   test("the page is installable as a PWA", async ({ page }) => {

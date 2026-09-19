@@ -35,6 +35,30 @@ const storage = {
   }
 };
 
+// Display preferences are edited on the settings page and read back by the
+// workout page, so the key, defaults and normalization live here.
+const PREFS_KEY = "prefs";
+const PREFS_DEFAULTS = { showNotes: true, showDifficulty: true, animate: true };
+
+function loadPrefs() {
+  const saved = storage.get(PREFS_KEY, PREFS_DEFAULTS);
+  const source = saved && typeof saved === "object" ? saved : PREFS_DEFAULTS;
+  return {
+    showNotes: source.showNotes !== false,
+    showDifficulty: source.showDifficulty !== false,
+    animate: source.animate !== false
+  };
+}
+
+function savePrefs(prefs) {
+  const source = prefs && typeof prefs === "object" ? prefs : PREFS_DEFAULTS;
+  return storage.set(PREFS_KEY, {
+    showNotes: source.showNotes !== false,
+    showDifficulty: source.showDifficulty !== false,
+    animate: source.animate !== false
+  });
+}
+
 // Formats a Date as YYYY-MM-DD using the local calendar day, so date keys never
 // shift by a day the way `toISOString()` does for non-UTC timezones.
 function getLocalDateKey(date = new Date()) {
@@ -94,6 +118,10 @@ function createElement(tag, options = {}) {
 
 const WorkoutCommon = {
   storage,
+  PREFS_KEY,
+  PREFS_DEFAULTS,
+  loadPrefs,
+  savePrefs,
   getLocalDateKey,
   shiftDateKey,
   formatSeconds,

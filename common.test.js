@@ -119,4 +119,29 @@ describe("common.js", () => {
       expect(common.createElement("p", { text: "" }).textContent).toBe("");
     });
   });
+  describe("display preferences", () => {
+    test("loadPrefs defaults to everything on when nothing is saved", () => {
+      expect(common.loadPrefs()).toEqual({ showNotes: true, showDifficulty: true, animate: true });
+    });
+
+    test("loadPrefs only turns a preference off for an explicit false", () => {
+      common.storage.set(common.PREFS_KEY, { showNotes: false, showDifficulty: 0, animate: undefined });
+      expect(common.loadPrefs()).toEqual({ showNotes: false, showDifficulty: true, animate: true });
+    });
+
+    test("loadPrefs falls back to the defaults for a non-object value", () => {
+      localStorage.setItem(common.PREFS_KEY, JSON.stringify("nope"));
+      expect(common.loadPrefs()).toEqual(common.PREFS_DEFAULTS);
+    });
+
+    test("savePrefs normalizes and round-trips through loadPrefs", () => {
+      expect(common.savePrefs({ showNotes: false, showDifficulty: true, animate: false })).toBe(true);
+      expect(common.loadPrefs()).toEqual({ showNotes: false, showDifficulty: true, animate: false });
+    });
+
+    test("savePrefs stores the defaults for a non-object value", () => {
+      expect(common.savePrefs(null)).toBe(true);
+      expect(common.storage.get(common.PREFS_KEY, null)).toEqual(common.PREFS_DEFAULTS);
+    });
+  });
 });
