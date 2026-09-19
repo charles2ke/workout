@@ -632,6 +632,15 @@ describe("workout.js", () => {
       expect(stepper(card, "sets", "decrease").getAttribute("aria-label")).toContain("Decrease sets");
     });
 
+    test("counter fields avoid wrapping several controls in one label", () => {
+      const card = activeCard();
+      const counter = card.querySelector(".log-counter");
+      expect(counter.tagName).toBe("DIV");
+      expect(counter.querySelector(".log-field-text").textContent).toBe("Sets");
+      expect(card.querySelectorAll("label.log-field").length).toBe(1);
+      expect(card.querySelector("label.log-field [data-log-field]").dataset.logField).toBe("weight");
+    });
+
     test("increase starts an empty field at one step and persists it", () => {
       const card = activeCard();
       stepper(card, "sets", "increase").click();
@@ -773,6 +782,18 @@ describe("workout.js", () => {
       jest.advanceTimersByTime(10000);
       expect(first.querySelector(".rest-display").textContent).toBe("01:30");
       expect(second.querySelector(".rest-display").textContent).toBe("01:20");
+    });
+
+    test("an interrupted rest reports it instead of staying stuck on resting", () => {
+      const [first, second] = panels();
+      first.querySelector(".rest-start").click();
+      jest.advanceTimersByTime(5000);
+      second.querySelector(".rest-start").click();
+
+      expect(statusOf(first)).toContain("Rest interrupted");
+      expect(statusOf(first)).toContain("start round 2 of 3");
+      expect(first.classList.contains("resting")).toBe(false);
+      expect(first.querySelector(".rest-display").textContent).toBe("01:30");
     });
 
     test("re-rendering the day cancels the running rest timer", () => {

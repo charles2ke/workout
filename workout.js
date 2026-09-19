@@ -339,14 +339,20 @@ function createLogControls(exerciseName, key, todayKey, legacyKey) {
     input.value = entry[field] === null ? "" : String(entry[field]);
     // Whole-number fields get counter-style steppers so a set or rep can be
     // added with one tap mid-workout instead of typing into a number field.
-    const children = counter
-      ? [createStepperButton(field, -step, label, exerciseName), input, createStepperButton(field, step, label, exerciseName)]
-      : [input];
-    return createElement("label", {
-      className: counter ? "log-field log-counter" : "log-field",
-      text: label,
-      children
-    });
+    // A <label> may only wrap one labelable control, so counters use a plain
+    // wrapper plus a text span; every control already has its own aria-label.
+    if (counter) {
+      return createElement("div", {
+        className: "log-field log-counter",
+        children: [
+          createElement("span", { className: "log-field-text", text: label }),
+          createStepperButton(field, -step, label, exerciseName),
+          input,
+          createStepperButton(field, step, label, exerciseName)
+        ]
+      });
+    }
+    return createElement("label", { className: "log-field", text: label, children: [input] });
   });
 
   return createElement("div", {
@@ -869,17 +875,27 @@ function setRestDisplay(panel, seconds) {
   panel.querySelector(".rest-display").textContent = formatSeconds(seconds);
 }
 
-function stopActiveRest() {
+// A rest cut short by starting another exercise's rest would otherwise keep a
+// frozen countdown and a "resting…" status, so reset it to its idle state.
+function markRestInterrupted(panel) {
+  const { rounds, restSeconds, round } = restPanelState(panel);
+  setRestDisplay(panel, restSeconds);
+  setRestStatus(panel, `Rest interrupted — start round ${round + 1} of ${rounds}.`);
+}
+
+function stopActiveRest({ interrupted = false } = {}) {
   if (!activeRest) return;
+  const { panel } = activeRest;
   clearInterval(activeRest.handle);
-  activeRest.panel.classList.remove("resting");
-  activeRest.panel.querySelector(".rest-skip").disabled = true;
+  panel.classList.remove("resting");
+  panel.querySelector(".rest-skip").disabled = true;
   activeRest = null;
+  if (interrupted) markRestInterrupted(panel);
 }
 
 function startRestAfterRound(panel) {
   if (activeRest?.panel === panel) return;
-  stopActiveRest();
+  stopActiveRest({ interrupted: true });
 
   const { rounds, restSeconds, round } = restPanelState(panel);
   const completedRounds = round + 1;
