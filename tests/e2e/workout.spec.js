@@ -27,6 +27,27 @@ test.describe("Workout App", () => {
     await page.screenshot({ path: "playwright-screenshots/03-wednesday-tab.png", fullPage: true });
   });
 
+  test("a video opens on demand and closing it returns focus to the exercise", async ({ page }) => {
+    // Exercise the real dialog without depending on YouTube availability in CI.
+    await page.route("https://www.youtube-nocookie.com/embed/**", (route) =>
+      route.fulfill({ contentType: "text/html", body: "<title>Exercise demo</title>" })
+    );
+    await page.locator("#tab-mon").click();
+    const trigger = page.getByRole("button", { name: "Bench press video", exact: true });
+    await expect(page.locator("iframe")).toHaveCount(0);
+    await trigger.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: "playwright-screenshots/22-exercise-videos.png" });
+    await trigger.press("Enter");
+
+    const dialog = page.getByRole("dialog", { name: "Bench press" });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByTitle("Bench press video")).toHaveAttribute("src", "https://www.youtube-nocookie.com/embed/SCVCLChPQFY");
+    await dialog.getByRole("button", { name: "Close video" }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page.locator("iframe")).toHaveCount(0);
+    await expect(trigger).toBeFocused();
+  });
+
   test("ethnicity dropdown has Indian selected by default and shows all options", async ({ page }) => {
     const select = page.locator("#ethnicity-input");
     await expect(select).toHaveValue("Indian");
