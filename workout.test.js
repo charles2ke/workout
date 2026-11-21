@@ -327,6 +327,27 @@ describe("workout.js", () => {
       expect(document.querySelector("iframe")).toBeNull();
     });
 
+    test("cached HTML without a video dialog still initializes workouts and direct links", () => {
+      jest.resetModules();
+      localStorage.clear();
+      setupEnv();
+      document.getElementById("video-dialog").remove();
+      loadModule();
+
+      expect(document.querySelectorAll(".tab-btn")).toHaveLength(7);
+      document.getElementById("tab-mon").click();
+      const card = document.querySelector("#panel-mon .exercise-card");
+      const link = card.querySelector(".exercise-videos a");
+      expect(link.href).toBe("https://www.youtube.com/watch?v=SCVCLChPQFY");
+      expect(link.target).toBe("_blank");
+      expect(link.rel).toBe("noopener noreferrer");
+      expect(card.querySelector("svg")).not.toBeNull();
+      const done = card.querySelector("[data-log-field='done']");
+      done.click();
+      expect(document.getElementById("progress-mon").textContent).toContain("Today: 1 of");
+      expect(document.querySelector("iframe")).toBeNull();
+    });
+
     test("non-HTTP origins get a direct watch link instead", () => {
       jest.spyOn(window, "location", "get").mockReturnValue({ protocol: "capacitor:" });
       api.renderDays(api.WORKOUT_DATA);

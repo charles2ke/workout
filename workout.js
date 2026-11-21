@@ -317,7 +317,7 @@ function openExerciseVideo({ title, youtubeId }, watchUrl) {
 }
 
 // Removing the player also stops playback when the dialog is dismissed with Escape.
-videoDialog.addEventListener("close", () => videoPlayer.replaceChildren());
+videoDialog?.addEventListener("close", () => videoPlayer.replaceChildren());
 
 function createVideoControls(exercise) {
   const controls = exercise.videos.map((video) => {
@@ -325,7 +325,7 @@ function createVideoControls(exercise) {
     const label = `${video.title} video`;
     // Older iOS web views can follow the watch link but cannot show a modal dialog.
     if (
-      typeof videoDialog.showModal !== "function" ||
+      typeof videoDialog?.showModal !== "function" ||
       !["http:", "https:"].includes(window.location.protocol)
     ) {
       return createElement("a", {
