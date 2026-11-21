@@ -287,6 +287,13 @@ describe("workout.js", () => {
       expect(document.querySelector("iframe")).toBeNull();
     });
 
+    test("focuses the trigger before opening its dialog", () => {
+      const trigger = document.querySelector("#panel-mon .exercise-videos button");
+      trigger.click();
+      expect(document.activeElement).toBe(trigger);
+      expect(dialog.showModal).toHaveBeenCalledTimes(1);
+    });
+
     test("opening an alternative shows its player and watch link; dismissing it unloads the player", () => {
       document.getElementById("tab-mon").click();
       const buttons = document.querySelectorAll("#panel-mon .exercise-card:first-child .exercise-videos button");
