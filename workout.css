@@ -291,6 +291,54 @@
   padding: 8px 10px;
 }
 
+.exercise-videos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0;
+}
+
+.exercise-videos p {
+  flex-basis: 100%;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+#video-dialog {
+  width: min(46rem, calc(100% - 24px));
+  margin: auto;
+  padding: 14px;
+  background: var(--card-bg);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+}
+
+#video-dialog::backdrop { background: rgb(0 0 0 / 75%); }
+
+#video-dialog:not([open]) { display: none; }
+
+.video-dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.video-dialog-head h2 { font-size: 1.15rem; }
+
+#video-player { margin: 12px 0; }
+
+#video-player iframe {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  min-height: 200px;
+  border: 0;
+}
+
+#video-watch-link { color: var(--accent); }
+
 /* ===== Mobile ===== */
 @media (max-width: 640px) {
   .profile-summary {
@@ -348,6 +396,8 @@
   .page-nav,
   .nav-tabs,
   .copy-btn,
+  .exercise-videos,
+  #video-dialog,
   .exercise-log,
   .exercise-rest,
   .history-panel {

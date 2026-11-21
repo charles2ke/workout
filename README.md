@@ -22,6 +22,7 @@ A lightweight, dependency-free weekly workout planner. No frameworks, no bundler
 
 - **7-day program** — structured daily workouts covering upper body push/pull, lower body, active recovery, hypertrophy, posterior chain, full-body conditioning, and rest
 - **Exercise cards** — each card shows sets/reps, difficulty, coaching notes, and an animated inline SVG illustration of the movement
+- **Workout videos** — choose a movement under **Video demos** on any exercise card to watch without leaving the plan. YouTube loads only when you open a demo and requires an internet connection; the exercise illustrations remain available offline.
 - **Rest timer** — a configurable countdown at the top of the page, plus a per-exercise timer on every card that starts the exercise's own rest interval after each round and counts the rounds down to the last one, with an audio notification tone when rest is complete
 - **Editable profile** — inline fields for name, age, ethnicity, height, and weight, persisted in `localStorage`
 - **Sets & reps counters** — the sets and reps logged for an exercise are stepped up or down with − / + buttons instead of typing

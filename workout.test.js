@@ -37,6 +37,7 @@ function buildAudioMocks() {
 
 function setupEnv({ restSecondsValue } = {}) {
   document.body.innerHTML = domBody;
+  document.getElementById("video-dialog").showModal = jest.fn(); // Not implemented in jsdom.
   if (restSecondsValue !== undefined) {
     document.getElementById("rest-seconds").value = restSecondsValue;
   }
@@ -263,6 +264,69 @@ describe("workout.js", () => {
       resetAndLoad({ restSecondsValue: "" });
       // Just verify the module loaded without error; the || 90 fallback runs at module scope
       expect(document.getElementById("timer-display").textContent).toMatch(/^\d{2}:\d{2}$/);
+    });
+  });
+
+  // =========================================================================
+  // Exercise videos
+  // =========================================================================
+  describe("Exercise videos", () => {
+    let api, dialog;
+
+    beforeEach(() => {
+      api = resetAndLoad()._test;
+      dialog = document.getElementById("video-dialog");
+    });
+
+    afterEach(() => jest.restoreAllMocks());
+
+    test("each exercise offers demos without loading any players", () => {
+      for (const card of document.querySelectorAll(".exercise-card")) {
+        expect(card.querySelector(".exercise-videos button")).not.toBeNull();
+      }
+      expect(document.querySelector("iframe")).toBeNull();
+    });
+
+    test("opening an alternative shows its player and watch link; dismissing it unloads the player", () => {
+      document.getElementById("tab-mon").click();
+      const buttons = document.querySelectorAll("#panel-mon .exercise-card:first-child .exercise-videos button");
+      buttons[1].click();
+      expect(dialog.showModal).toHaveBeenCalledTimes(1);
+      expect(dialog.querySelector("h2").textContent).toBe("Push-up");
+      const frame = dialog.querySelector("iframe");
+      expect(frame.title).toBe("Push-up video");
+      expect(frame.src).toBe("https://www.youtube-nocookie.com/embed/_l3ySVKYVJ8");
+      expect(dialog.querySelector("a").href).toBe("https://www.youtube.com/watch?v=_l3ySVKYVJ8");
+
+      dialog.dispatchEvent(new Event("close"));
+      expect(document.querySelector("iframe")).toBeNull();
+    });
+
+    test("offline users see a connection notice instead of a broken player", () => {
+      jest.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+      document.querySelector(".day-section.active .exercise-videos button").click();
+      expect(dialog.showModal).toHaveBeenCalled();
+      expect(dialog.textContent).toContain("You're offline");
+      expect(dialog.querySelector("iframe")).toBeNull();
+    });
+
+    test("browsers without native dialogs get a direct watch link instead", () => {
+      dialog.showModal = undefined;
+      api.renderDays(api.WORKOUT_DATA);
+      const link = document.querySelector("#panel-mon .exercise-videos a");
+      expect(link.textContent).toBe("Bench press video (new tab)");
+      expect(link.href).toBe("https://www.youtube.com/watch?v=SCVCLChPQFY");
+      expect(link.target).toBe("_blank");
+      expect(document.querySelector("iframe")).toBeNull();
+    });
+
+    test("an exercise without videos still renders its illustration and log controls", () => {
+      const day = api.WORKOUT_DATA[0];
+      api.renderDays([{ ...day, exercises: [{ ...day.exercises[0], videos: undefined }] }]);
+      const card = document.querySelector(".exercise-card");
+      expect(card.querySelector(".exercise-videos")).toBeNull();
+      expect(card.querySelector("svg")).not.toBeNull();
+      expect(card.querySelector(".log-check")).not.toBeNull();
     });
   });
 
