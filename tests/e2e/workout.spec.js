@@ -37,7 +37,7 @@ test.describe("Workout App", () => {
     await expect(page.locator("iframe")).toHaveCount(0);
     await trigger.scrollIntoViewIfNeeded();
     await page.screenshot({ path: "playwright-screenshots/22-exercise-videos.png" });
-    await trigger.press("Enter");
+    await trigger.click();
 
     const dialog = page.getByRole("dialog", { name: "Bench press" });
     await expect(dialog).toBeVisible();

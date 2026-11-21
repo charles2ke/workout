@@ -339,7 +339,10 @@ function createVideoControls(exercise) {
       text: label,
       attrs: { type: "button", "aria-haspopup": "dialog" }
     });
-    button.addEventListener("click", () => openExerciseVideo(video, watchUrl));
+    button.addEventListener("click", () => {
+      button.focus();
+      openExerciseVideo(video, watchUrl);
+    });
     return button;
   });
   return createElement("div", {
