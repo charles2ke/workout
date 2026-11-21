@@ -89,6 +89,17 @@
     </footer>
   </div>
 
+  <dialog id="video-dialog" aria-labelledby="video-title">
+    <div class="video-dialog-head">
+      <h2 id="video-title">Exercise video</h2>
+      <form method="dialog">
+        <button type="submit" class="button" aria-label="Close video">Close</button>
+      </form>
+    </div>
+    <div id="video-player"></div>
+    <a id="video-watch-link" target="_blank" rel="noopener noreferrer">Watch on YouTube (new tab)</a>
+  </dialog>
+
   <script src="common.js"></script>
   <script src="workout-log.js"></script>
   <script src="workout.js"></script>

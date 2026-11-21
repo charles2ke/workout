@@ -20,7 +20,11 @@ const WORKOUT_DATA = [
         difficulty: "Moderate",
         restSeconds: 90,
         rounds: 3,
-        illustration: "press"
+        illustration: "press",
+        videos: [
+          { title: "Bench press", youtubeId: "SCVCLChPQFY" },
+          { title: "Push-up", youtubeId: "_l3ySVKYVJ8" }
+        ]
       },
       {
         id: "lat-pulldowns-pull-ups",
@@ -30,7 +34,11 @@ const WORKOUT_DATA = [
         difficulty: "Moderate",
         restSeconds: 90,
         rounds: 3,
-        illustration: "pull"
+        illustration: "pull",
+        videos: [
+          { title: "Lat pulldown", youtubeId: "CAwf7n6Luuc" },
+          { title: "Strict pull-up", youtubeId: "HRV5YKKaeVw" }
+        ]
       }
     ]
   },
@@ -49,7 +57,8 @@ const WORKOUT_DATA = [
         difficulty: "Moderate",
         restSeconds: 90,
         rounds: 3,
-        illustration: "squat"
+        illustration: "squat",
+        videos: [{ title: "Goblet squat", youtubeId: "gCESNsDsbqk" }]
       }
     ]
   },
@@ -68,7 +77,8 @@ const WORKOUT_DATA = [
         difficulty: "Easy",
         restSeconds: 30,
         rounds: 1,
-        illustration: "cardio"
+        illustration: "cardio",
+        videos: [{ title: "Finding your Zone 2 pace", youtubeId: "1RqY5EYOM0k" }]
       }
     ]
   },
@@ -87,7 +97,8 @@ const WORKOUT_DATA = [
         difficulty: "Moderate",
         restSeconds: 60,
         rounds: 3,
-        illustration: "row"
+        illustration: "row",
+        videos: [{ title: "Single-arm dumbbell row", youtubeId: "pYcpY20QaE8" }]
       }
     ]
   },
@@ -106,7 +117,8 @@ const WORKOUT_DATA = [
         difficulty: "Hard",
         restSeconds: 90,
         rounds: 3,
-        illustration: "split"
+        illustration: "split",
+        videos: [{ title: "Bulgarian split squat", youtubeId: "2C-uNgKwPLE" }]
       }
     ]
   },
@@ -125,7 +137,8 @@ const WORKOUT_DATA = [
         difficulty: "Moderate",
         restSeconds: 45,
         rounds: 3,
-        illustration: "swing"
+        illustration: "swing",
+        videos: [{ title: "Kettlebell swing", youtubeId: "OPcG_thX6Dc" }]
       }
     ]
   },
@@ -144,7 +157,11 @@ const WORKOUT_DATA = [
         difficulty: "Easy",
         restSeconds: 30,
         rounds: 1,
-        illustration: "recovery"
+        illustration: "recovery",
+        videos: [
+          { title: "Calf foam rolling", youtubeId: "w-e7YIpiok0" },
+          { title: "Walking technique", youtubeId: "2SiZzfHanQY" }
+        ]
       }
     ]
   }
@@ -277,6 +294,60 @@ const streakDisplay = document.getElementById("streak-display");
 const historyList = document.getElementById("history-list");
 const historyEmpty = document.getElementById("history-empty");
 const clearTodayButton = document.getElementById("clear-today-log");
+const videoDialog = document.getElementById("video-dialog");
+const videoPlayer = document.getElementById("video-player");
+
+function openExerciseVideo({ title, youtubeId }, watchUrl) {
+  document.getElementById("video-title").textContent = title;
+  document.getElementById("video-watch-link").href = watchUrl;
+  if (navigator.onLine) {
+    videoPlayer.replaceChildren(createElement("iframe", {
+      attrs: {
+        src: `https://www.youtube-nocookie.com/embed/${youtubeId}`,
+        title: `${title} video`,
+        referrerpolicy: "strict-origin-when-cross-origin",
+        allow: "encrypted-media; picture-in-picture",
+        allowfullscreen: ""
+      }
+    }));
+  } else {
+    videoPlayer.textContent = "You're offline. Reconnect and reopen this video to watch.";
+  }
+  videoDialog.showModal();
+}
+
+// Removing the player also stops playback when the dialog is dismissed with Escape.
+videoDialog.addEventListener("close", () => videoPlayer.replaceChildren());
+
+function createVideoControls(exercise) {
+  const controls = exercise.videos.map((video) => {
+    const watchUrl = `https://www.youtube.com/watch?v=${video.youtubeId}`;
+    const label = `${video.title} video`;
+    // Older iOS web views can follow the watch link but cannot show a modal dialog.
+    if (typeof videoDialog.showModal !== "function") {
+      return createElement("a", {
+        className: "button",
+        text: `${label} (new tab)`,
+        attrs: { href: watchUrl, target: "_blank", rel: "noopener noreferrer" }
+      });
+    }
+    const button = createElement("button", {
+      className: "button",
+      text: label,
+      attrs: { type: "button", "aria-haspopup": "dialog" }
+    });
+    button.addEventListener("click", () => openExerciseVideo(video, watchUrl));
+    return button;
+  });
+  return createElement("div", {
+    className: "exercise-videos",
+    attrs: { role: "group", "aria-label": `Video demos for ${exercise.name}` },
+    children: [
+      createElement("p", { text: "Video demos · YouTube · Internet required" }),
+      ...controls
+    ]
+  });
+}
 
 // ===== Workout log =====
 let workoutLog = loadLog();
@@ -521,11 +592,9 @@ function renderDays(days) {
       card.dataset.legacyExerciseKey = legacyKey || "";
       card.dataset.dayId = day.id;
 
+      info.append(exerciseTitle, stats, difficulty, notes);
+      if (exercise.videos?.length) info.append(createVideoControls(exercise));
       info.append(
-        exerciseTitle,
-        stats,
-        difficulty,
-        notes,
         copyButton,
         createLogControls(exercise.name, key, todayKey, legacyKey),
         createRestTimer(exercise)
