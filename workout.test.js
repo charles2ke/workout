@@ -320,6 +320,15 @@ describe("workout.js", () => {
       expect(document.querySelector("iframe")).toBeNull();
     });
 
+    test("non-HTTP origins get a direct watch link instead", () => {
+      jest.spyOn(window, "location", "get").mockReturnValue({ protocol: "capacitor:" });
+      api.renderDays(api.WORKOUT_DATA);
+      const link = document.querySelector("#panel-mon .exercise-videos a");
+      expect(link.textContent).toBe("Bench press video (new tab)");
+      expect(link.href).toBe("https://www.youtube.com/watch?v=SCVCLChPQFY");
+      expect(document.querySelector("iframe")).toBeNull();
+    });
+
     test("an exercise without videos still renders its illustration and log controls", () => {
       const day = api.WORKOUT_DATA[0];
       api.renderDays([{ ...day, exercises: [{ ...day.exercises[0], videos: undefined }] }]);

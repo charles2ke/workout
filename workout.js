@@ -324,7 +324,10 @@ function createVideoControls(exercise) {
     const watchUrl = `https://www.youtube.com/watch?v=${video.youtubeId}`;
     const label = `${video.title} video`;
     // Older iOS web views can follow the watch link but cannot show a modal dialog.
-    if (typeof videoDialog.showModal !== "function") {
+    if (
+      typeof videoDialog.showModal !== "function" ||
+      !["http:", "https:"].includes(window.location.protocol)
+    ) {
       return createElement("a", {
         className: "button",
         text: `${label} (new tab)`,
